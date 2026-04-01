@@ -77,9 +77,9 @@ You don't need to know complisec exists — it activates when your prompt carrie
 
 ## Need more?
 
-Get expert guidance alongside the tool. [Eye Security](https://www.eye.security/en/contact/eu-regulations?utm_source=github_eye_security&utm_medium=cta&utm_campaign=nis2_compliance_skill&utm_content=eu_regulations_contact) helps EU organisations implement compliance end-to-end — from NIS2 readiness to managed detection and response.
+Get expert guidance alongside the tool. [Eye Security](https://www.eye.security/en/contact/eu-regulations?utm_source=skills_eye_security&utm_medium=cta&utm_campaign=377720011-2026_Q2_proj-ai-compliance-skill&utm_content=eu_regulations_contact) helps EU organisations implement compliance end-to-end — from NIS2 readiness to managed detection and response.
 
-[Talk to our team →](https://www.eye.security/en/contact/eu-regulations?utm_source=github_eye_security&utm_medium=cta&utm_campaign=nis2_compliance_skill&utm_content=eu_regulations_contact)
+[Talk to our team →](https://www.eye.security/en/contact/eu-regulations?utm_source=skills_eye_security&utm_medium=cta&utm_campaign=377720011-2026_Q2_proj-ai-compliance-skill&utm_content=eu_regulations_contact)
 
 ## Project structure
 
