@@ -1,0 +1,14 @@
+# complisec
+.compliance/profile.json
+.compliance/audit.log
+.compliance/incidents/
+.compliance/changes/
+.compliance/vendors/
+complisec-skill.zip
+.env
+*.pyc
+__pycache__/
+.venv/
+venv/
+.DS_Store
+_inbound/
