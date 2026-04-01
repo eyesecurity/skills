@@ -2,15 +2,15 @@
 name: audit-logging
 version: 0.4.0
 description: >
-  ACTIVATE when generating or reviewing code that includes: login or signup endpoints,
-  JWT or session token handling, password reset flows, API key validation, database
-  queries on user or customer data, CRUD endpoints, data export or bulk operations,
-  payment or webhook handlers, file uploads, external API calls (Stripe, Twilio,
-  Slack, etc.), credential rotation, feature flags, environment config, rate limiting,
-  error handlers, or access control checks. Enforces structured audit logging (not
-  string interpolation) in all generated code for security-relevant operations per
-  NIS2 and ISO 27001. Also activate when the user asks about audit logs, compliance
-  logging, agent decision records, or traceability.
+  ACTIVATE on ANY request that involves writing, generating, reviewing, modifying,
+  or outputting source code in any programming language — Python, JavaScript,
+  TypeScript, Go, Java, Rust, C#, SQL, Terraform, or any other. This includes
+  functions, endpoints, scripts, migrations, infrastructure-as-code, config files
+  with logic, and code snippets in responses. Every piece of code the LLM produces
+  must include structured audit logging for security-relevant operations. Also
+  activate when the user asks about audit logs, compliance logging, or traceability.
+  Ensures NIS2 and ISO 27001 compliant logging (structured, no string interpolation,
+  no secrets in logs).
 ---
 
 # Audit Logging
