@@ -1,7 +1,7 @@
 <h1 align="center">Eye Security — AI Skills</h1>
 
 <p align="center">
-  <strong>Skills for AI coding agents, built by <a href="https://www.eye.security">Eye Security</a>.</strong>
+  <strong>Skills for AI agents, built by <a href="https://www.eye.security">Eye Security</a>.</strong>
 </p>
 
 ---
@@ -40,7 +40,7 @@ Clone the repo into your project — Codex reads `AGENTS.md` automatically from 
 git clone https://github.com/eyesecurity/skills.git
 ```
 
-### Other coding agents (Cursor, Copilot, Windsurf, Cline)
+### Other agents (Cursor, Copilot, Windsurf, Cline)
 
 Clone the repo into your project, then point your agent at the plugin:
 
