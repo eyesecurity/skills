@@ -1,7 +1,7 @@
 # Eye Security — AI Skills
 
-This repo contains AI agent skills by Eye Security.
+This repo contains AI agent skills by Eye Security. Each plugin lives in `plugins/<name>/`.
 
-## Available plugins
+Read the SKILL.md for the plugin you need:
 
-- **complisec** — EU compliance enforcement (NIS2, GDPR, ISO 27001). Read `plugins/complisec/SKILL.md` and follow its boot sequence. Sub-skills are in `plugins/complisec/skills/*/SKILL.md` — read them when referenced.
+- **complisec** — `plugins/complisec/SKILL.md`

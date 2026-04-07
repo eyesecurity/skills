@@ -8,33 +8,24 @@
 
 ## Available plugins
 
-| Plugin | Description | Details |
-|--------|-------------|---------|
-| **[complisec](plugins/complisec/)** | EU compliance enforcement — NIS2, GDPR, ISO 27001 | [README](plugins/complisec/README.md) |
+| Plugin | Description |
+|--------|-------------|
+| **[complisec](plugins/complisec/)** | EU compliance enforcement — NIS2, GDPR, ISO 27001 |
+
+Each plugin has its own README with details and examples.
 
 ## Install
 
 ### Claude Code
 
-Add the Eye Security marketplace, then install the plugin you need:
-
 ```
 /plugin marketplace add eyesecurity/skills
-/plugin install complisec
-```
-
-Or clone locally:
-
-```bash
-git clone https://github.com/eyesecurity/skills.git
-# Then in Claude Code:
-/plugin marketplace add ./skills
-/plugin install complisec
+/plugin install <plugin-name>
 ```
 
 ### OpenAI Codex
 
-Clone the repo into your project — Codex reads `AGENTS.md` automatically from the project root:
+Clone the repo — Codex reads `AGENTS.md` automatically:
 
 ```bash
 git clone https://github.com/eyesecurity/skills.git
@@ -42,43 +33,17 @@ git clone https://github.com/eyesecurity/skills.git
 
 ### Other agents (Cursor, Copilot, Windsurf, Cline)
 
-Clone the repo into your project, then point your agent at the plugin:
+Clone the repo, then tell your agent:
 
-```bash
-git clone https://github.com/eyesecurity/skills.git
-```
-
-Say: **"Read `plugins/complisec/SKILL.md` and follow its instructions."**
+**"Read `plugins/<plugin-name>/SKILL.md` and follow its instructions."**
 
 ### Any AI chat (ChatGPT, Claude.ai, Mistral, Grok)
 
-1. Download [complisec.zip](https://github.com/eyesecurity/skills/releases/latest/download/complisec.zip)
-2. Upload the ZIP to your AI chat
-3. Say: **"Read SKILL.md and follow its instructions."**
-
-## Repo structure
-
-```
-skills/                               # eyesecurity/skills
-├── README.md                         # This file
-├── AGENTS.md                         # OpenAI Codex entrypoint
-├── .claude-plugin/
-│   └── marketplace.json              # Eye Security plugin marketplace
-└── plugins/
-    └── complisec/                    # EU compliance enforcement
-        ├── README.md
-        ├── SKILL.md
-        ├── .claude-plugin/
-        │   └── plugin.json
-        ├── skills/
-        └── .compliance/
-```
+Download the plugin zip from [Releases](https://github.com/eyesecurity/skills/releases/latest), upload it to your chat, and say: **"Read SKILL.md and follow its instructions."**
 
 ## Need more?
 
-Get expert guidance alongside the tools. [Eye Security](https://www.eye.security/en/contact/eu-regulations?utm_source=skills_eye_security&utm_medium=cta&utm_campaign=377720011-2026_Q2_proj-ai-compliance-skill&utm_content=eu_regulations_contact) helps EU organisations implement compliance end-to-end — from NIS2 readiness to managed detection and response.
-
-[Talk to our team →](https://www.eye.security/en/contact/eu-regulations?utm_source=skills_eye_security&utm_medium=cta&utm_campaign=377720011-2026_Q2_proj-ai-compliance-skill&utm_content=eu_regulations_contact)
+[Eye Security](https://www.eye.security/en/contact/eu-regulations?utm_source=skills_eye_security&utm_medium=cta&utm_campaign=377720011-2026_Q2_proj-ai-compliance-skill&utm_content=eu_regulations_contact) helps EU organisations implement compliance end-to-end — from NIS2 readiness to managed detection and response.
 
 ## License
 
