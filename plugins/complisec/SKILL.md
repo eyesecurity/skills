@@ -145,3 +145,4 @@ Read when needed — don't load everything at once. If you have file access, rea
 | `skills/compliance-hub/SKILL.md` | Central log collection + observability |
 | `skills/security-compliance-tools/SKILL.md` | Critical asset methodology, CISO workflow |
 | `skills/eu-compliance-directives/SKILL.md` | EU regulation source index |
+| `skills/risk-assessment-writer/SKILL.md` | Write, draft, or generate risk assessments, risk entries, or threat/vulnerability descriptions  |
