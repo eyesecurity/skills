@@ -1,0 +1,5 @@
+{
+  "name": "complisec",
+  "description": "EU compliance enforcement for AI agents — NIS2, GDPR, ISO 27001",
+  "skills": "./skills/"
+}

@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "complisec audit event",
+  "description": "Minimal audit event schema — OCSF-aligned, OpenTelemetry-compatible.",
+  "type": "object",
+  "required": ["event_id", "timestamp", "trace_id", "event_class", "activity", "severity", "outcome", "summary"],
+  "properties": {
+    "event_id": { "type": "string", "format": "uuid" },
+    "timestamp": { "type": "string", "format": "date-time" },
+    "trace_id": { "type": "string", "pattern": "^[0-9a-f]{32}$" },
+    "span_id": { "type": "string", "pattern": "^[0-9a-f]{16}$" },
+    "parent_span_id": { "type": "string", "pattern": "^[0-9a-f]{16}$" },
+    "agent_id": { "type": "string" },
+    "event_class": { "enum": ["tool_call", "decision", "data_access", "error"] },
+    "activity": { "enum": ["read", "write", "classify", "scan", "block", "approve", "assess"] },
+    "severity": { "enum": ["INFO", "LOW", "MEDIUM", "HIGH", "CRITICAL"] },
+    "outcome": { "enum": ["success", "failure", "blocked", "deferred"] },
+    "summary": { "type": "string", "maxLength": 256 },
+    "resource": {
+      "type": "object",
+      "properties": {
+        "type": { "type": "string" },
+        "id": { "type": "string" },
+        "classification": { "enum": ["PUBLIC", "INTERNAL", "CONFIDENTIAL", "RESTRICTED"] }
+      }
+    },
+    "tool": {
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "exit_code": { "type": "integer" }
+      }
+    },
+    "decision": {
+      "type": "object",
+      "required": ["action", "reasoning", "policy_ref"],
+      "properties": {
+        "action": { "enum": ["block", "approve", "defer"] },
+        "reasoning": { "type": "string" },
+        "policy_ref": { "type": "string" },
+        "human_override": { "type": "boolean", "default": false }
+      }
+    },
+    "metadata": { "type": "object" }
+  },
+  "additionalProperties": false
+}

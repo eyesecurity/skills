@@ -1,0 +1,22 @@
+{
+  "complisec_profile": {
+    "org": "Bakker Logistics BV | NL | transport/road | 85 emp | important NIS2 | ISO27001",
+    "critical_assets": [
+      ["Fleet management", "sys", [4,5,5], "CTO"],
+      ["Client shipment DB", "data", [5,5,4], "Ops dir"],
+      ["SAP Business One", "sys", [4,4,5], "Finance dir"],
+      ["Warehouse access", "sys", [3,4,5], "Facility mgr"]
+    ],
+    "data_residency": "EU only",
+    "risk_appetite": { "c": "zero_tolerance", "i": "low", "a": "medium" },
+    "suppliers": [
+      ["SAP", "EU", true, true],
+      ["AWS", "EU", true, true],
+      ["Salesforce", "EU", true, false],
+      ["TomTom", "EU", true, true],
+      ["Exact Online", "NL", true, false]
+    ],
+    "incident_reporting": "NCSC-NL 24/72h | AP 72h",
+    "legal": ["NIS2 important", "GDPR controller", "ISO27001"]
+  }
+}
