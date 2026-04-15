@@ -1,8 +1,17 @@
 ---
 name: risk-assessment-writer
 description: >
-Create, draft, or generate ISO 27001 risk assessments, risk evaluations, or threat/vulnerability descriptions for an ISMS. Also activate on "write a risk", "new risk entry", "risk assessment", "weakness", or when the user describes a vulnerability, threat scenario, or new business activity they want risk-assessed. Covers information security risks, compliance risks, operational risks, vendor risks, HR risks, physical security risks, and quality risks within the ISO 27001 framework. Triggers: user mentions "risk", "risk assessment", "vulnerability", "threat", "weakness".
+  ACTIVATE when the user asks to write, create, draft, or generate a risk assessment,
+  risk entry, risk evaluation, or threat/vulnerability description — or when the user
+  describes a threat, vulnerability, weakness, new business activity, or scenario they
+  want risk-assessed. Covers information security, compliance, operational, vendor, HR,
+  physical, and quality risks within the ISO 27001 framework. Produces a structured
+  risk entry with Risk Evaluation + Risk Treatment tables, L/M/H scoring, and guided
+  likelihood/impact questions.
 ---
+
+# Risk Assessment Writer
+
 > Every new risk gets a structured assessment. No threat goes undocumented.
 
 All output is written **entirely in English**.
@@ -25,7 +34,7 @@ Each risk page has two main sections: **Risk Evaluation** and **Risk Treatment**
 | **Likelihood** | How likely is this to happen | L (Low), M (Medium), H (High) |
 | **Impact** | How bad if it happens | L, M, H |
 | **Risk** | Derived from matrix (see below) | L, M, H |
-| **Owner** | Who is accountable | Security Officer, CTO, Management, CISO office, Insurance Management, Eye Underwriting Management, Quality Manager, Marketing Lead |
+| **Owner** | Who is accountable | Security Officer, CTO, Management, CISO office, DPO, Quality Manager, Marketing Lead, or a domain-specific role |
 | **Status** | Treatment decision | ACCEPT (Green), REDUCE (Yellow), PREVENT (Red), TRANSFER |
 | **Date of last review** | When last assessed | YYYY-MM-DD |
 | **Countries** | Where this risk applies | Netherlands, Belgium, Germany, All |
@@ -194,17 +203,6 @@ Due to [cause], it is possible that [event]. This could lead to [impact].
 | **Incident management** | Response procedures, reporting channels, evidence collection, lessons learned |
 | **Business continuity** | BC measures, cloud storage, failover, backup procedures |
 | **Operational** | Own network equipment, one-way connections, SaaS intermediary, spot checks |
-
-## Triggers for the agent
-
-The agent should activate this skill when:
-
-- User asks to write, create, or draft a risk assessment
-- User describes a new business activity, tool, process, or threat they want assessed
-- User mentions "risk", "risk assessment", "vulnerability", "threat", "weakness"
-- User asks to evaluate likelihood or impact of a scenario
-- User wants to update or review an existing risk entry
-- User asks what treatment option to choose for a specific risk
 
 ## Agent instructions
 

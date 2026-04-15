@@ -242,7 +242,7 @@ Works automatically if your agent uses LangChain/LangGraph — every chain execu
 | **Cost** | Free → $59/mo | Free → $39/mo | ~$0.001/GB/mo |
 | **Dashboard** | Yes | Yes | No (use Athena/BigQuery to query) |
 | **Search** | Full-text | Full-text | Only with additional tooling |
-| **Self-host** | Yes (MIT) | No | N/A (you own the bucket) |
+| **Self-host** | Yes | No | N/A (you own the bucket) |
 | **EU hosting** | Yes | No | Yes (choose region) |
 | **Immutability** | No | No | Yes (Object Lock/WORM) |
 | **Alerting** | Basic | Basic | CloudWatch/Azure Monitor |

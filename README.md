@@ -47,4 +47,4 @@ Download the plugin zip from [Releases](https://github.com/eyesecurity/skills/re
 
 ## License
 
-MIT
+See [LICENSE](LICENSE).

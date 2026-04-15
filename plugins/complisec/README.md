@@ -1,6 +1,4 @@
 <p align="center">
-  <img src="https://img.shields.io/badge/complisec-v2.0.0-blue?style=flat-square" alt="version" />
-  <img src="https://img.shields.io/badge/license-MIT-green?style=flat-square" alt="license" />
   <img src="https://img.shields.io/badge/NIS2-ready-green?style=flat-square" alt="NIS2" />
   <img src="https://img.shields.io/badge/GDPR-ready-green?style=flat-square" alt="GDPR" />
 </p>
@@ -49,7 +47,9 @@ Only the `nis2-gap-analysis` sub-skill needs Python 3.10+ (for the NIS2 applicab
 | Skill | What it does |
 |-------|-------------|
 | **complisec** (root) | Onboarding questionnaire + profile-aware enforcement on compliance-relevant actions |
+| **org-profile** | Questionnaire to capture critical assets, data residency, risk appetite, suppliers, legal obligations |
 | **nis2-gap-analysis** | 5-level maturity NIS2/Cbw assessment with consultant field methodology |
+| **risk-assessment-writer** | ISO 27001 risk entry generator with L/M/H scoring, guided likelihood/impact questions, measure library |
 | **incident-management** | Structured incident lifecycle with NIS2 24/72h/30d + GDPR 72h deadline tracking and EU reporting directory |
 | **vendor-risk** | Vendor assessment, DPA tracking, data residency checks, NIS2 Art. 21(2)(d) supply chain |
 | **change-management** | Change records for critical assets with impact classification, approval workflow, rollback plans |
@@ -85,4 +85,4 @@ complisec/
 
 ## License
 
-MIT
+See [LICENSE](../../LICENSE).
