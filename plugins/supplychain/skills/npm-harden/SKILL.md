@@ -11,7 +11,7 @@ Activate on `/npm-harden` or `/npm-harden <path>`. Treat the path as project roo
 
 ```sh
 grep -oE '"packageManager":\s*"[^"@]*' package.json 2>/dev/null | grep -oE '[a-z]+$'
-ls pnpm-lock.yaml yarn.lock package-lock.json bun.lock 2>/dev/null || true
+ls pnpm-lock.yaml yarn.lock package-lock.json 2>/dev/null || true
 ```
 
 Detect from `packageManager` field, then from whichever lockfile is present. Run the matching block below as a single bash call.
@@ -23,7 +23,7 @@ echo "PNPM_VERSION=$(pnpm --version 2>/dev/null)"
 echo "GLOBAL_RELEASE_AGE=$(pnpm config get minimumReleaseAge 2>/dev/null)"
 echo "LOCKFILE=$(ls pnpm-lock.yaml 2>/dev/null && echo PRESENT || echo ABSENT)"
 echo "LOCKFILE_GITIGNORED=$(grep -qE 'pnpm-lock' .gitignore 2>/dev/null && echo YES || echo NO)"
-echo "DANGEROUSLY=$(grep -qE 'dangerouslyAllowAllBuilds:\s*true' pnpm-workspace.yaml 2>/dev/null && echo YES || echo NO)"
+echo "DANGEROUSLY=$(grep -qE '(dangerouslyAllowAllBuilds|dangerously-allow-all-builds)[:=]\s*true' pnpm-workspace.yaml .npmrc 2>/dev/null && echo YES || echo NO)"
 echo "PKG_MANAGER_FIELD=$(grep -oE '"packageManager":\s*"[^"]*"' package.json 2>/dev/null | grep -oE '[a-z]+@[0-9][^"]*' || echo NOT_SET)"
 echo "=== RELEASE_AGE ===" && grep -E "minimumReleaseAge" pnpm-workspace.yaml .npmrc 2>/dev/null || echo "NOT_SET"
 echo "=== BUILD_POLICY ===" && grep -E "dangerouslyAllowAllBuilds|allowBuilds|strictDepBuilds|onlyBuiltDependencies|ignoredBuiltDependencies" pnpm-workspace.yaml 2>/dev/null || echo "NOT_SET"
@@ -52,6 +52,14 @@ echo "=== YARNRC ===" && grep -E "enableScripts|npmMinimalAgeGate|defaultSemverR
 echo "=== EXOTIC_DEPS ===" && grep -oE '"[^"]+": "(git\+?https?://[^"]+|github:[^"]+|bitbucket:[^"]+|gitlab:[^"]+|[^"]+\.tgz|file:\.\.)"' package.json 2>/dev/null || echo "NONE"
 ```
 
+## Step 1.5 — derive version flags
+
+From Step 1 output, compute the booleans below once and reference them by name in Step 3. Do not repeat version comparisons in prose downstream.
+
+- `CVE_FLAG`: YES if `PNPM_VERSION` parses and is `< 10.26.2` (CVE-2025-69263/69264 unpatched). NO if parses and ≥. UNKNOWN if `PNPM_VERSION` empty/unparseable → emit ⚡ WARN "pnpm binary not found on PATH — CVE version check skipped; ensure installed version ≥10.26.2". N/A if `MGR` ≠ pnpm.
+- `PKG_MGR_CVE`: YES if `PKG_MANAGER_FIELD` matches `pnpm@X.Y.Z` with X.Y.Z `< 10.26.2`. NO otherwise. Applies regardless of installed pnpm (project pin, not runtime).
+- `YARN_SCRIPTS_OFF`: YES if `YARN_VERSION` parses and is `≥ 4.14.0` (scripts-off default landed). NO if parses and `<`. UNKNOWN if empty → ⚡ WARN "yarn binary not found — version check skipped". N/A if `MGR` ≠ yarn.
+
 ## Step 2 — version rules
 
 **Yarn v1**: 🚨 CRITICAL for PM-1 — scripts run by default, no allowlist. Output: "Yarn Classic detected — lifecycle scripts enabled with no protection. Same exposure as npm without ignore-scripts. Migrate to pnpm or Yarn Berry v4."
@@ -69,16 +77,17 @@ pnpm: DANGEROUSLY=YES → 🚨 CRITICAL "dangerouslyAllowAllBuilds: true — all
 
 npm: Read NPMRC for `ignore-scripts`. Not found or `ignore-scripts=false` → 🚨 CRITICAL "lifecycle scripts enabled by default — preinstall/install/postinstall run on every npm install. e.g. Axios (Mar 2026) used a postinstall hook to deploy a cross-platform RAT to every machine that ran npm install during a 3h window." `ignore-scripts=true` → PASS (check PackageGate: if EXOTIC_DEPS ≠ NONE, downgrade to ⚡ WARN).
 
-Yarn v1: 🚨 CRITICAL "Yarn Classic — scripts run by default with no allowlist. Same exposure as npm without ignore-scripts. e.g. Shai-Hulud's postinstall worm would have executed on every yarn install. Migrate to pnpm or Yarn Berry v4."
-Yarn v2/v3: read YARNRC for `enableScripts`. Absent → ⚡ WARN "confirm Yarn ≥4.14 — scripts-off default arrived in v4.14."
-Yarn ≥4.14: `enableScripts` absent/false → ✅ PASS. `enableScripts: true` → 🚨 CRITICAL "explicitly re-enabled lifecycle scripts — Yarn v4.14 ships with scripts off; this reverses that. e.g. Shai-Hulud's postinstall payload would execute on every yarn install."
-Bun: ⚡ WARN "trustedDependencies validates names only, not sources — git dep with trusted name bypasses it."
+Yarn Classic (v1): 🚨 CRITICAL "Yarn Classic — scripts run by default with no allowlist. Same exposure as npm without ignore-scripts. e.g. Shai-Hulud's postinstall worm would have executed on every yarn install. Migrate to pnpm or Yarn Berry v4."
+
+Yarn Berry (v2+):
+- `YARN_SCRIPTS_OFF=NO` (pre-v4.14): read YARNRC for `enableScripts`. Absent → ⚡ WARN "pre-v4.14 Yarn Berry — scripts-off default arrived in v4.14; upgrade or set `enableScripts: false` explicitly."
+- `YARN_SCRIPTS_OFF=YES` (v4.14+): `enableScripts` absent/false → ✅ PASS. `enableScripts: true` → 🚨 CRITICAL "explicitly re-enabled lifecycle scripts — Yarn v4.14 ships with scripts off; this reverses that. e.g. Shai-Hulud's postinstall payload would execute on every yarn install."
 
 **PM-2 Release age gate**
 
 Read RELEASE_AGE extraction (and GLOBAL_RELEASE_AGE for pnpm). Normalise to days for output.
 
-Unit conversion: pnpm value ÷ 1440 = days (10080 = 7d; if >43800 → WARN wrong unit). Bun ÷ 86400 = days. Yarn: parse string ("7d"/"1w"/"168h" = 7d; raw int → WARN ambiguous unit). npm: value already days.
+Unit conversion: pnpm value ÷ 1440 = days (10080 = 7d; if >43800 → WARN wrong unit). Yarn: parse string ("7d"/"1w"/"168h" = 7d; raw int → WARN ambiguous unit). npm: value already days.
 
 Verdicts — apply to the *effective* value after conversion:
 - NOT_SET with no exclude list → 🚨 CRITICAL "release age: 0d — every newly published version installs immediately. e.g. Axios 1.14.1 (Mar 2026) was live for 3h, Shai-Hulud 2.0 (Nov 2025) for 12h, chalk/debug (Sep 2025) for 2.5h — all would have landed."
@@ -93,7 +102,7 @@ Verdicts — apply to the *effective* value after conversion:
 Read PKG_MANAGER_FIELD signal.
 
 - `NOT_SET` → ⚡ WARN "packageManager field absent — manager version floats between environments. Add `\"packageManager\": \"pnpm@x.y.z\"` to package.json."
-- Present, fully pinned with patch (e.g. `pnpm@10.26.2`) → ✅ PASS. Cross-check: if version is below known CVE threshold (pnpm < 10.26.2), escalate to 🚨 CRITICAL "pinned to CVE-affected version — update to ≥10.26.2. e.g. pnpm <10.26.2 allows a git dependency to override the git binary via .npmrc and execute scripts even with dangerouslyAllowAllBuilds: false (CVE-2025-69263)."
+- Present, fully pinned with patch (e.g. `pnpm@10.26.2`) → if `PKG_MGR_CVE=YES` → 🚨 CRITICAL "pinned to CVE-affected version — update to ≥10.26.2. e.g. pnpm <10.26.2 allows a git dependency to override the git binary via .npmrc and execute scripts even with dangerouslyAllowAllBuilds: false (CVE-2025-69263)." Else → ✅ PASS.
 - Present, partially pinned (e.g. `pnpm@10` or `pnpm@10.26`) → ⚡ WARN "missing patch version — pin to exact (e.g. pnpm@10.26.2) to prevent silent patch updates."
 
 **PM-4 Lockfile**
@@ -104,8 +113,9 @@ Read LOCKFILE signal. ABSENT → 🚨 CRITICAL "no lockfile — every install re
 
 Read EXOTIC_DEPS. NONE → ✅ PASS for direct deps. Then read HARDENING for `blockExoticSubdeps`: present+true → ✅; absent → ⚡ WARN (pnpm only).
 npm + EXOTIC_DEPS ≠ NONE → 🔶 FAIL (PackageGate unpatched bypass).
-pnpm <10.26.2 + EXOTIC_DEPS ≠ NONE → 🔶 FAIL (CVE-2025-69263/69264).
-pnpm ≥10.26.2 + EXOTIC_DEPS ≠ NONE → ⚡ WARN.
+pnpm + EXOTIC_DEPS ≠ NONE + `CVE_FLAG=YES` → 🔶 FAIL (CVE-2025-69263/69264 — git dep can override git binary via .npmrc).
+pnpm + EXOTIC_DEPS ≠ NONE + `CVE_FLAG=NO` → ⚡ WARN.
+pnpm + EXOTIC_DEPS ≠ NONE + `CVE_FLAG=UNKNOWN` → ⚡ WARN "exotic deps present; pnpm version unverifiable — ensure ≥10.26.2 before install."
 
 **PM-6 Trust policy** (pnpm only)
 
@@ -157,13 +167,16 @@ Examples:
 ```
 
 **Incident examples in CRITICAL findings:**
-Every 🚨 CRITICAL finding must include the `e.g.` line from the check definition — do not paraphrase it into a CVE description. The named incident (Axios, Shai-Hulud, chalk/debug) is what makes the risk concrete. Output the incident name and date exactly as specified in the check, e.g.:
+
+Step 3 is the **sole source** for finding wording. Copy both the first clause and the full `e.g.` line **verbatim** from the matching Step 3 definition. Do not paraphrase, shorten, re-order incidents, or combine multiple incidents into a new sentence. If Step 3 lists three incidents, output all three.
+
+Layout template (placeholders are structural only — do not emit them literally):
 ```
-  🚨 PM2  release age: 0d — packages install immediately
-          e.g. Axios 1.14.1 (Mar 2026) was live 3h, Shai-Hulud (Nov 2025) 12h — both inside a 7d gate
-          └─ pnpm-workspace.yaml: minimumReleaseAge: 10080  # 7 days in minutes
+  🚨 PMx  <first clause, verbatim from Step 3>
+          <full e.g. line, verbatim from Step 3>
+          └─ <file>: <exact config value>
 ```
-1-2 lines max. Name specific files and exact values. State combined impact in one clause. If CVE present, include it first. Do not repeat this line anywhere else in the output.
+Name specific files and exact values. If CVE present, include it first. Do not repeat any finding line elsewhere in the output.
 
 Format: `→ [verb] [what with exact values] — [impact]`
 

@@ -37,7 +37,6 @@ See the [eyesecurity/skills README](../../README.md) for installation instructio
 | *postinstall-scan* | `/postinstall-scan` | `package.json.scripts` + transitive lifecycle hooks (curl\|sh, eval, base64) | planned |
 | *npmrc-secrets* | `/npmrc-secrets` | Committed auth tokens in `.npmrc` | planned |
 | *aliases-overrides* | `/aliases-overrides` | npm aliases, `overrides` / `resolutions` / `pnpm.overrides` | planned |
-| *bun-harden* | `/bun-harden` | Bun-specific checks | planned |
 
 Planned skills are documented to signal roadmap. No empty directories, no broken slash commands.
 
