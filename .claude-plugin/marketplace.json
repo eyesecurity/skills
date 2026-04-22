@@ -8,6 +8,11 @@
       "name": "complisec",
       "source": "./plugins/complisec",
       "description": "EU compliance enforcement for AI agents — NIS2, GDPR, ISO 27001"
+    },
+    {
+      "name": "supplychain",
+      "source": "./plugins/supplychain",
+      "description": "Supply-chain security for JavaScript projects — npm/pnpm/Yarn Berry hardening against 2025-2026 attack patterns"
     }
   ]
 }
