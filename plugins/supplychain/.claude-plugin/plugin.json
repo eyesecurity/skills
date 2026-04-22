@@ -1,0 +1,5 @@
+{
+  "name": "supplychain",
+  "description": "Supply-chain security for JavaScript projects — npm/pnpm/Yarn Berry hardening and (planned) CI workflow audits against 2025-2026 attack patterns.",
+  "skills": "./skills/"
+}
