@@ -144,6 +144,7 @@ Apply the same icon to the section header as to its highest-severity item.
 /npm-harden · [project name] ([manager] [version])
 🚨 N critical  🔶 N failing  ⚡ N hardening  ✅ N passing
 → [top fix]
+📖 Hardening guide: [manager docs URL — see table below]
 
 [sections...]
 ```
@@ -151,6 +152,16 @@ Apply the same icon to the section header as to its highest-severity item.
 Omit any zero-count category from line 2. If everything passes: `✅ all passing`.
 
 Line 2 is a count of *checks*, not sections. Count each PM finding that has a result.
+
+**Hardening-guide link** (line 4, one line, plain URL — no markdown link syntax, renders cleanly in monospace):
+
+| `MGR` | URL |
+|-------|-----|
+| `pnpm` | `https://pnpm.io/supply-chain-security` |
+| `npm` | `https://github.blog/security/supply-chain-security/our-plan-for-a-more-secure-npm-supply-chain/` |
+| `yarn` (v1 or v2+) | `https://yarnpkg.com/features/security` |
+
+Emit exactly one line. If `MGR` is unknown, omit the 📖 line entirely.
 
 **Fix line format — every fix uses this pattern:**
 ```
