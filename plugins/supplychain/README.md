@@ -1,14 +1,14 @@
 <p align="center">
   <img src="https://img.shields.io/badge/npm-hardened-green?style=flat-square" alt="npm" />
   <img src="https://img.shields.io/badge/pnpm-hardened-green?style=flat-square" alt="pnpm" />
-  <img src="https://img.shields.io/badge/Yarn%20Berry-hardened-green?style=flat-square" alt="Yarn Berry" />
+  <img src="https://img.shields.io/badge/Yarn%20v2%2B-hardened-green?style=flat-square" alt="Yarn v2+" />
 </p>
 
 <h1 align="center">supplychain</h1>
 
 <p align="center">
   <strong>Supply-chain security for JavaScript projects.</strong><br>
-  Hardens npm, pnpm, and Yarn Berry against 2025-2026 attack patterns (Shai-Hulud, chalk/debug, Axios).
+  Hardens npm, pnpm, and Yarn v2+ against 2025-2026 attack patterns (Shai-Hulud, chalk/debug, Axios).
 </p>
 
 ---
@@ -32,7 +32,7 @@ See the [eyesecurity/skills README](../../README.md) for installation instructio
 
 | Skill | Trigger | Scope | Status |
 |-------|---------|-------|--------|
-| **npm-harden** | `/npm-harden [path]` | Local project config — npm, pnpm, Yarn Berry | shipped |
+| **npm-harden** | `/npm-harden [path]` | Local project config — npm, pnpm, Yarn v2+ | shipped |
 | *ci-supplychain-audit* | `/ci-supplychain` | `.github/workflows/**` — action pinning, OIDC, `pull_request_target`, secret handling | planned |
 | *postinstall-scan* | `/postinstall-scan` | `package.json.scripts` + transitive lifecycle hooks (curl\|sh, eval, base64) | planned |
 | *npmrc-secrets* | `/npmrc-secrets` | Committed auth tokens in `.npmrc` | planned |

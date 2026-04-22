@@ -1,6 +1,6 @@
 ---
 name: npm-harden
-description: Hardens npm, pnpm, and Yarn Berry projects against supply chain attacks. Audits package manager configuration, version pinning, and lockfile hygiene against 2025-2026 attack patterns. Trigger with /npm-harden or /npm-harden <path>.
+description: Hardens npm, pnpm, and Yarn v2+ projects against supply chain attacks. Audits package manager configuration, version pinning, and lockfile hygiene against 2025-2026 attack patterns. Trigger with /npm-harden or /npm-harden <path>.
 ---
 
 ## Trigger
@@ -62,8 +62,8 @@ From Step 1 output, compute the booleans below once and reference them by name i
 
 ## Step 2 — version rules
 
-**Yarn v1**: 🚨 CRITICAL for PM-1 — scripts run by default, no allowlist. Output: "Yarn Classic detected — lifecycle scripts enabled with no protection. Same exposure as npm without ignore-scripts. Migrate to pnpm or Yarn Berry v4."
-**Yarn v2/v3**: apply Berry checks; scripts-off-by-default arrived in v4.14.
+**Yarn v1**: 🚨 CRITICAL for PM-1 — scripts run by default, no allowlist. Output: "Yarn Classic detected — lifecycle scripts enabled with no protection. Same exposure as npm without ignore-scripts. Migrate to pnpm or Yarn v4."
+**Yarn v2/v3**: apply Yarn v2+ checks; scripts-off-by-default arrived in v4.14.
 **pnpm < 10.0**: allowBuilds-as-default absent — flag.
 **pnpm < 10.26.2**: CVE-2025-69263/69264 unpatched — git dep script bypass. Flag regardless.
 
@@ -77,10 +77,10 @@ pnpm: DANGEROUSLY=YES → 🚨 CRITICAL "dangerouslyAllowAllBuilds: true — all
 
 npm: Read NPMRC for `ignore-scripts`. Not found or `ignore-scripts=false` → 🚨 CRITICAL "lifecycle scripts enabled by default — preinstall/install/postinstall run on every npm install. e.g. Axios (Mar 2026) used a postinstall hook to deploy a cross-platform RAT to every machine that ran npm install during a 3h window." `ignore-scripts=true` → PASS (check PackageGate: if EXOTIC_DEPS ≠ NONE, downgrade to ⚡ WARN).
 
-Yarn Classic (v1): 🚨 CRITICAL "Yarn Classic — scripts run by default with no allowlist. Same exposure as npm without ignore-scripts. e.g. Shai-Hulud's postinstall worm would have executed on every yarn install. Migrate to pnpm or Yarn Berry v4."
+Yarn Classic (v1): 🚨 CRITICAL "Yarn Classic — scripts run by default with no allowlist. Same exposure as npm without ignore-scripts. e.g. Shai-Hulud's postinstall worm would have executed on every yarn install. Migrate to pnpm or Yarn v4."
 
-Yarn Berry (v2+):
-- `YARN_SCRIPTS_OFF=NO` (pre-v4.14): read YARNRC for `enableScripts`. Absent → ⚡ WARN "pre-v4.14 Yarn Berry — scripts-off default arrived in v4.14; upgrade or set `enableScripts: false` explicitly."
+Yarn v2+:
+- `YARN_SCRIPTS_OFF=NO` (pre-v4.14): read YARNRC for `enableScripts`. Absent → ⚡ WARN "pre-v4.14 Yarn — scripts-off default arrived in v4.14; upgrade or set `enableScripts: false` explicitly."
 - `YARN_SCRIPTS_OFF=YES` (v4.14+): `enableScripts` absent/false → ✅ PASS. `enableScripts: true` → 🚨 CRITICAL "explicitly re-enabled lifecycle scripts — Yarn v4.14 ships with scripts off; this reverses that. e.g. Shai-Hulud's postinstall payload would execute on every yarn install."
 
 **PM-2 Release age gate**
