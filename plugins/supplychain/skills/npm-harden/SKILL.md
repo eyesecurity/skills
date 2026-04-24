@@ -25,7 +25,10 @@ echo "LOCKFILE=$(ls pnpm-lock.yaml 2>/dev/null && echo PRESENT || echo ABSENT)"
 echo "LOCKFILE_GITIGNORED=$(grep -qE 'pnpm-lock' .gitignore 2>/dev/null && echo YES || echo NO)"
 echo "DANGEROUSLY=$(grep -qE '(dangerouslyAllowAllBuilds|dangerously-allow-all-builds)[:=]\s*true' pnpm-workspace.yaml .npmrc 2>/dev/null && echo YES || echo NO)"
 echo "PKG_MANAGER_FIELD=$(grep -oE '"packageManager":\s*"[^"]*"' package.json 2>/dev/null | grep -oE '[a-z]+@[0-9][^"]*' || echo NOT_SET)"
-echo "=== RELEASE_AGE ===" && grep -E "minimumReleaseAge" pnpm-workspace.yaml .npmrc 2>/dev/null || echo "NOT_SET"
+echo "GLOBAL_IGNORE_SCRIPTS=$(pnpm config get ignore-scripts 2>/dev/null)"
+echo "ONLY_ALLOW=$(grep -oE '"preinstall":\s*"[^"]*only-allow[^"]*"' package.json 2>/dev/null || echo NOT_SET)"
+echo "=== RELEASE_AGE ===" && grep -E "minimumReleaseAge|minimum-release-age" pnpm-workspace.yaml .npmrc 2>/dev/null || echo "NOT_SET"
+echo "=== NPMRC ===" && grep -E "ignore-scripts|ignoreScripts|minimum-release-age|minimumReleaseAge" .npmrc 2>/dev/null || echo "NOT_SET"
 echo "=== BUILD_POLICY ===" && grep -E "dangerouslyAllowAllBuilds|allowBuilds|strictDepBuilds|onlyBuiltDependencies|ignoredBuiltDependencies" pnpm-workspace.yaml 2>/dev/null || echo "NOT_SET"
 echo "=== HARDENING ===" && grep -E "blockExoticSubdeps|trustPolicy" pnpm-workspace.yaml 2>/dev/null || echo "NOT_SET"
 echo "=== EXOTIC_DEPS ===" && grep -oE '"[^"]+": "(git\+?https?://[^"]+|github:[^"]+|bitbucket:[^"]+|gitlab:[^"]+|[^"]+\.tgz|file:\.\.)"' package.json 2>/dev/null || echo "NONE"
@@ -82,7 +85,7 @@ Apply only checks for detected manager. Read signals from Step 1 output — do n
 
 **PM-1 Lifecycle script control**
 
-pnpm: DANGEROUSLY=YES → 🚨 CRITICAL "dangerouslyAllowAllBuilds: true — all pnpm script protection disabled. e.g. Shai-Hulud (Sep 2025) used postinstall hooks to steal credentials from 796 packages; this setting would have let it run." DANGEROUSLY=NO → ✅ PASS (pnpm v10 default). Then read BUILD_POLICY extraction: if `allowBuilds` present, list packages and flag non-native entries (expected: esbuild, sharp, canvas, fsevents, node-gyp); if `onlyBuiltDependencies`/`ignoredBuiltDependencies` present, note migration to `allowBuilds`; if `strictDepBuilds: true` absent, add ⚡ WARN to HARDENING section.
+pnpm: DANGEROUSLY=YES → 🚨 CRITICAL "dangerouslyAllowAllBuilds: true — all pnpm script protection disabled. e.g. Shai-Hulud (Sep 2025) used postinstall hooks to steal credentials from 796 packages; this setting would have let it run." DANGEROUSLY=NO → ✅ PASS (pnpm v10 default). Then read BUILD_POLICY extraction: if `allowBuilds` present, list packages and flag non-native entries (expected: esbuild, sharp, canvas, fsevents, node-gyp); if `onlyBuiltDependencies`/`ignoredBuiltDependencies` present, note migration to `allowBuilds`; if `strictDepBuilds: true` absent, add ⚡ WARN to HARDENING section. Global-config credit: if `GLOBAL_IGNORE_SCRIPTS=true` or `NPMRC` contains `ignore-scripts=true` / `ignoreScripts=true`, add ✅ note "lifecycle scripts globally disabled via pnpm config — defence-in-depth on top of the v10 default".
 
 npm: Read NPMRC for `ignore-scripts`. Not found or `ignore-scripts=false` → 🚨 CRITICAL "lifecycle scripts enabled by default — preinstall/install/postinstall run on every npm install. e.g. Axios 1.14.1 (Mar 2026) used a postinstall hook to deploy a cross-platform RAT during a 3h window; @bitwarden/cli 2026.4.0 (Apr 2026) used the preinstall hook to harvest GitHub tokens, AWS/GCP/Azure secrets, shell history, and AI-tool configs from every machine that ran npm install." `ignore-scripts=true` → PASS (check PackageGate: if EXOTIC_DEPS ≠ NONE, downgrade to ⚡ WARN).
 
@@ -98,9 +101,13 @@ Read RELEASE_AGE extraction (and GLOBAL_RELEASE_AGE for pnpm). Normalise to days
 
 Unit conversion: pnpm value ÷ 1440 = days (10080 = 7d; if >43800 → WARN wrong unit). Yarn: parse string ("7d"/"1w"/"168h" = 7d; raw int → WARN ambiguous unit). npm: value ÷ 86400 = days (seconds, since npm v11.10.0; 604800 = 7d). Key in `.npmrc` accepted as `min-release-age`, `minimum-release-age`, or camelCase `minimumReleaseAge`.
 
-Verdicts — apply to the *effective* value after conversion:
-- NOT_SET with no exclude list → 🚨 CRITICAL "release age: 0d — every newly published version installs immediately. e.g. Axios 1.14.1 (Mar 2026) was live for 3h, Shai-Hulud 2.0 (Nov 2025) for 12h, chalk/debug (Sep 2025) for 2.5h — all would have landed."
-- Exclude present, base NOT_SET → 🚨 CRITICAL "exclude list set but gate inactive — team believes release-age protection is on; it is not. e.g. Axios 1.14.1 would have installed silently despite the apparent configuration."
+Effective value: project `RELEASE_AGE` takes precedence; if absent and `MGR=pnpm`, fall back to `GLOBAL_RELEASE_AGE`. Convert to days, then apply verdicts.
+
+Verdicts:
+- Project NOT_SET, no exclude list, AND (npm/yarn OR pnpm global also NOT_SET/0) → 🚨 CRITICAL "release age: 0d — every newly published version installs immediately. e.g. Axios 1.14.1 (Mar 2026) was live for 3h, Shai-Hulud 2.0 (Nov 2025) for 12h, chalk/debug (Sep 2025) for 2.5h — all would have landed."
+- Project NOT_SET, pnpm `GLOBAL_RELEASE_AGE` ≥10080 (7d) → ✅ PASS + note "pnpm global config supplies minimumReleaseAge={N}d — consider committing to `pnpm-workspace.yaml` for team visibility and new-joiner parity."
+- Project NOT_SET, pnpm `GLOBAL_RELEASE_AGE` 1-6d → ⚡ WARN "global config has release age <7d — raise to 10080 and commit to workspace file."
+- Exclude present, base NOT_SET (and no global fallback) → 🚨 CRITICAL "exclude list set but gate inactive — team believes release-age protection is on; it is not. e.g. Axios 1.14.1 would have installed silently despite the apparent configuration."
 - Exclude present, base set → ✅ note excluded packages, flag non-internal-scoped ones
 - <1d → ⚡ WARN
 - 1–6d → ✅ PASS + note "consider 7d"
@@ -152,6 +159,18 @@ Fix-line examples:
         └─ package.json: replace "^1.2.3" with "1.2.3" (exact pin)
         └─ .npmrc: save-exact=true
         └─ .yarnrc.yml: defaultSemverRangePrefix: ""
+```
+
+**PM-8 Manager enforcement** (pnpm only)
+
+Read `ONLY_ALLOW`. Checks whether the project blocks teammates from accidentally running `npm install` / `yarn install` and bypassing pnpm's protections.
+
+- Present (any `preinstall` matching `only-allow` or `only-allow pnpm`) → ✅ PASS "preinstall guard blocks non-pnpm installs".
+- `NOT_SET` → ⚡ WARN "no preinstall guard — a teammate running `npm install` out of habit silently creates `package-lock.json`, installs without pnpm's release-age gate, and runs lifecycle scripts with npm defaults. Add `\"preinstall\": \"npx only-allow pnpm\"` to package.json scripts."
+
+Fix line:
+```
+        └─ package.json: "scripts": { "preinstall": "npx only-allow pnpm" }
 ```
 
 ## Step 4 — output format
