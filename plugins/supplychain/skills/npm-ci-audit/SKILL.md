@@ -19,6 +19,7 @@ echo "DEPENDABOT=$(ls .github/dependabot.yml .github/dependabot.yaml 2>/dev/null
 echo "=== DEPENDABOT_ECOSYSTEMS ===" && grep -E "package-ecosystem" .github/dependabot.yml .github/dependabot.yaml 2>/dev/null || echo "NONE"
 echo "PKG_MANAGER_FIELD=$(grep -oE '"packageManager":\s*"[^"]*"' package.json 2>/dev/null | grep -oE '[a-z]+@[0-9][^"]*' || echo NOT_SET)"
 echo "LOCKFILES=$(ls pnpm-lock.yaml yarn.lock package-lock.json 2>/dev/null | tr '\n' ' ' || echo NONE)"
+echo "REPO_ORG=$(git config --get remote.origin.url 2>/dev/null | sed -E 's|.*[:/]([^/]+)/[^/]+(\.git)?$|\1|' | head -1 || echo NONE)"
 ```
 
 Then per-workflow scans (single bash call):
@@ -80,11 +81,18 @@ From Step 1 output:
 - `WORKFLOW_MGR_VERSION`: semver from `SETUP_PNPM_VERSION` / `SETUP_NODE_VERSION` matching the detected manager. If multiple workflows pin different versions, flag.
 - `MGR_VERSION_DRIFT`: YES if `PROJECT_MGR_VERSION` and `WORKFLOW_MGR_VERSION` both parse and differ in major or minor. Patch-only drift → NO.
 
-**Action pinning**
-- `USES_TOTAL`: lines in `USES_ALL`.
-- `USES_SHA_COUNT`: sum of counts from `USES_SHA`.
-- `USES_BRANCH_COUNT`: lines in `USES_BRANCH`.
-- `USES_TAG_COUNT`: `USES_TOTAL − USES_SHA_COUNT − USES_BRANCH_COUNT`.
+**Action pinning** — scope is external actions only. First-party and self-org are exempt.
+
+For each line in `USES_ALL`, classify by owner prefix:
+- **First-party**: `actions/*`, `github/*` — exempt; no verdict emitted.
+- **Self-org**: `$REPO_ORG/*` (if `REPO_ORG` parsed from `git remote`) — exempt; no verdict emitted.
+- **External**: everything else — subject to CI-1.
+
+Derived counts over *external* lines only:
+- `EXT_TOTAL`: external `uses:` lines.
+- `EXT_SHA`: external lines where the ref matches `@[0-9a-f]{40}`.
+- `EXT_BRANCH`: external lines where the ref matches `@(main|master|develop|HEAD)`.
+- `EXT_TAG`: `EXT_TOTAL − EXT_SHA − EXT_BRANCH`.
 
 **Trigger risk**
 - `PRT_RISK`: YES if `TRIGGER_PRT` present AND `CHECKOUT_PRHEAD` present. MAYBE if only `TRIGGER_PRT`. NO otherwise.
@@ -164,14 +172,14 @@ Paths that bypass the project's lockfile and release-age gate.
 
 ### CI group (secondary — generic GitHub Actions hardening that compounds npm risk)
 
-**CI-1 Action pinning**
+**CI-1 Action pinning (external actions only)**
 
-Primary CI supply-chain control after tj-actions/changed-files (CVE-2025-30066, Mar 2025). Actions touching the install or publish step are the highest-value targets. First-party `actions/*` and `github/*` get one verdict tier lower since GitHub protects their tags organisationally.
+Primary CI supply-chain control after tj-actions/changed-files (CVE-2025-30066, Mar 2025). Applies only to **external** actions — first-party (`actions/*`, `github/*`) and self-org (`$REPO_ORG/*`) are exempt because their tag and branch refs are controlled by a party the project already trusts for other purposes.
 
-- `USES_BRANCH_COUNT > 0` → 🚨 CRITICAL "workflow uses branch refs (@main/@master/@HEAD) — reference resolves live on every run. A single push to the action's branch by the owner or a compromised maintainer executes in your CI with your secrets and can steal your npm publish token. e.g. if tj-actions/changed-files had been pinned to @main instead of @v45 during CVE-2025-30066 (Mar 2025), every run during the 15h compromise window would still have leaked secrets." List first 5 from `USES_BRANCH`.
-- `USES_TAG_COUNT > 0` (third-party) → 🔶 FAIL "mutable tag refs — tags can be retroactively repointed to a malicious commit. e.g. tj-actions/changed-files (CVE-2025-30066, Mar 14-15 2025) had @v1..@v45 tags repointed to a secret-leaking commit, affecting 23k+ repositories in a 15h window. The s1ngularity attack (Aug 2025) exploited the same class to steal npm publishing tokens from Nx build workflows." List first 5 third-party entries.
-- `USES_TAG_COUNT > 0` (only `actions/*` or `github/*`) → ⚡ WARN "first-party tags only — GitHub protects these organisationally but they're still mutable. Pin to SHA for defence-in-depth, especially on publish workflows."
-- All SHA-pinned → ✅ PASS "all N action uses pinned to 40-char commit SHA."
+- `EXT_BRANCH > 0` → 🚨 CRITICAL "external action uses a branch ref (@main/@master/@HEAD) — reference resolves live on every run. A single push to the action's default branch by a compromised maintainer executes in your CI with your secrets and can steal your npm publish token. e.g. if tj-actions/changed-files had been pinned to @main instead of @v45 during CVE-2025-30066 (Mar 2025), every run during the 15h compromise window would still have leaked secrets." List first 5 from `USES_BRANCH` filtered to external.
+- `EXT_TAG > 0` → 🔶 FAIL "external actions use mutable tag refs — tags can be retroactively repointed to a malicious commit. e.g. tj-actions/changed-files (CVE-2025-30066, Mar 14-15 2025) had @v1..@v45 tags repointed to a secret-leaking commit, affecting 23k+ repositories in a 15h window. The s1ngularity attack (Aug 2025) exploited the same class to steal npm publishing tokens from Nx build workflows. Pin each external action to a 40-char commit SHA." List first 5 external tag entries.
+- `EXT_TOTAL > 0` AND all external pinned to SHA → ✅ PASS "all N external action uses pinned to 40-char commit SHA."
+- `EXT_TOTAL = 0` → ✅ PASS "no external actions in use (first-party and self-org only) — no SHA-pin requirement applies."
 
 **CI-2 Token permissions (least privilege)**
 
