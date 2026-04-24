@@ -29,6 +29,9 @@ echo "=== RELEASE_AGE ===" && grep -E "minimumReleaseAge" pnpm-workspace.yaml .n
 echo "=== BUILD_POLICY ===" && grep -E "dangerouslyAllowAllBuilds|allowBuilds|strictDepBuilds|onlyBuiltDependencies|ignoredBuiltDependencies" pnpm-workspace.yaml 2>/dev/null || echo "NOT_SET"
 echo "=== HARDENING ===" && grep -E "blockExoticSubdeps|trustPolicy" pnpm-workspace.yaml 2>/dev/null || echo "NOT_SET"
 echo "=== EXOTIC_DEPS ===" && grep -oE '"[^"]+": "(git\+?https?://[^"]+|github:[^"]+|bitbucket:[^"]+|gitlab:[^"]+|[^"]+\.tgz|file:\.\.)"' package.json 2>/dev/null || echo "NONE"
+echo "RANGE_TOTAL=$(grep -cE '"[\^~]' package.json 2>/dev/null || echo 0)"
+echo "=== PKG_NAME ===" && grep -oE '"name":\s*"[^"]*"' package.json 2>/dev/null | head -1
+echo "=== RANGES ===" && grep -oE '"[^"]+": "[\^~][^"]*"' package.json 2>/dev/null | head -8
 ```
 
 **npm:**
@@ -39,6 +42,9 @@ echo "LOCKFILE_GITIGNORED=$(grep -qE 'package-lock' .gitignore 2>/dev/null && ec
 echo "PKG_MANAGER_FIELD=$(grep -oE '"packageManager":\s*"[^"]*"' package.json 2>/dev/null | grep -oE '[a-z]+@[0-9][^"]*' || echo NOT_SET)"
 echo "=== NPMRC ===" && grep -E "ignore-scripts|min-release-age|minimum-release-age|minimumReleaseAge|save-exact" .npmrc 2>/dev/null || echo "NOT_SET"
 echo "=== EXOTIC_DEPS ===" && grep -oE '"[^"]+": "(git\+?https?://[^"]+|github:[^"]+|bitbucket:[^"]+|gitlab:[^"]+|[^"]+\.tgz|file:\.\.)"' package.json 2>/dev/null || echo "NONE"
+echo "RANGE_TOTAL=$(grep -cE '"[\^~]' package.json 2>/dev/null || echo 0)"
+echo "=== PKG_NAME ===" && grep -oE '"name":\s*"[^"]*"' package.json 2>/dev/null | head -1
+echo "=== RANGES ===" && grep -oE '"[^"]+": "[\^~][^"]*"' package.json 2>/dev/null | head -8
 ```
 
 **Yarn:**
@@ -50,6 +56,9 @@ echo "LOCKFILE_GITIGNORED=$(grep -qE 'yarn\.lock' .gitignore 2>/dev/null && echo
 echo "PKG_MANAGER_FIELD=$(grep -oE '"packageManager":\s*"[^"]*"' package.json 2>/dev/null | grep -oE '[a-z]+@[0-9][^"]*' || echo NOT_SET)"
 echo "=== YARNRC ===" && grep -E "enableScripts|npmMinimalAgeGate|defaultSemverRangePrefix" .yarnrc.yml 2>/dev/null || echo "NOT_SET"
 echo "=== EXOTIC_DEPS ===" && grep -oE '"[^"]+": "(git\+?https?://[^"]+|github:[^"]+|bitbucket:[^"]+|gitlab:[^"]+|[^"]+\.tgz|file:\.\.)"' package.json 2>/dev/null || echo "NONE"
+echo "RANGE_TOTAL=$(grep -cE '"[\^~]' package.json 2>/dev/null || echo 0)"
+echo "=== PKG_NAME ===" && grep -oE '"name":\s*"[^"]*"' package.json 2>/dev/null | head -1
+echo "=== RANGES ===" && grep -oE '"[^"]+": "[\^~][^"]*"' package.json 2>/dev/null | head -8
 ```
 
 ## Step 1.5 — derive version flags
@@ -121,6 +130,32 @@ pnpm + EXOTIC_DEPS ≠ NONE + `CVE_FLAG=UNKNOWN` → ⚡ WARN "exotic deps prese
 
 Read HARDENING for `trustPolicy`. `no-downgrade` present → ✅ PASS. Absent → ⚡ WARN.
 
+**PM-7 Version ranges**
+
+Read `RANGE_TOTAL`. `0` → ✅ PASS immediately, no further processing.
+
+If `>0`: read `PKG_NAME` to determine internal scope (e.g. `@eyectrl-engineering`, `@eye`). Classify each entry in `RANGES` as internal (matches own scope) or external.
+
+Verdicts (never 🚨 CRITICAL — release-age + lockfile carry the critical weight; ranges are the belt-and-suspenders):
+- All internal → ⚡ WARN "internal `^`/`~` ranges — tighten to exact for reproducibility; low supply-chain risk while scope is private."
+- 1–5 external → 🔶 FAIL, list them inline. "external `^`/`~` ranges resolve to latest-matching on any unfrozen install — a malicious patch cleared of the release-age gate lands automatically."
+- 6+ external → 🔶 FAIL, print count + first 5 from `RANGES`.
+
+Qualify with PM-4:
+- `PM-4=PASS` (lockfile committed + not gitignored) → append note "lower risk while CI uses `--frozen-lockfile`; risk lives in manual `npm/pnpm/yarn install` and `update` calls by developers."
+
+Config tie-ins (print under the finding as additional `└─` lines if applicable):
+- npm: `NPMRC` missing `save-exact=true` → add ⚡ WARN note and suggest `└─ .npmrc: save-exact=true`.
+- Yarn: `YARNRC` missing `defaultSemverRangePrefix` → add ⚡ WARN note and suggest `└─ .yarnrc.yml: defaultSemverRangePrefix: ""`.
+- pnpm: no equivalent config; suggest only exact-pin fixups in `package.json`.
+
+Fix-line examples:
+```
+        └─ package.json: replace "^1.2.3" with "1.2.3" (exact pin)
+        └─ .npmrc: save-exact=true
+        └─ .yarnrc.yml: defaultSemverRangePrefix: ""
+```
+
 ## Step 4 — output format
 
 **HARD STOP: output ends after ✅ PASSING. Do not generate patch files, config summaries, YAML blocks, or offers to apply fixes. Each fix is already specified inline in its section. Adding anything after PASSING is explicitly prohibited.**
@@ -129,7 +164,7 @@ No separate check results block. Each check appears exactly once inside its cate
 
 **Icon system — shape and color both carry meaning:**
 - 🚨 CRITICAL — any of: unpatched CVE in installed tooling; dangerouslyAllowAllBuilds: true; npm ignore-scripts absent (scripts run by default — primary attack vector); release age not configured on any manager; minimumReleaseAgeExclude set without minimumReleaseAge (false security posture); lockfile gitignored. Do not use for optional hardening gaps.
-- 🔶 FAIL — real gap needing a fix (Yarn Classic, lockfile absent)
+- 🔶 FAIL — real gap needing a fix (Yarn Classic, lockfile absent, external `^`/`~` ranges)
 - ⚡ WARN — hardening opportunity, not immediately exploitable
 - ✅ PASS — clean, shown last
 - ➖ N/A
