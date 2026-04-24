@@ -8,6 +8,11 @@
       "name": "complisec",
       "source": "./plugins/complisec",
       "description": "EU compliance enforcement for AI agents — NIS2, GDPR, ISO 27001"
+    },
+    {
+      "name": "supplychain",
+      "source": "./plugins/supplychain",
+      "description": "Protects the npm supply chain — hardens npm, pnpm, and Yarn v2+ projects locally and in GitHub Actions CI."
     }
   ]
 }
