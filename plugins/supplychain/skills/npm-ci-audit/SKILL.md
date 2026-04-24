@@ -1,11 +1,11 @@
 ---
 name: npm-ci-audit
-description: Audits npm/pnpm/Yarn supply-chain hardening in GitHub Actions workflows. Primary focus on how the project's package manager is invoked in CI — install commands, registry integrity, manager version pinning, publish flow (OIDC + provenance), and uncontrolled install surface (npx, global installs). Secondary focus on generic GitHub Actions hardening (external action SHA pinning, token permissions, pull_request_target). Trigger with /npm-ci-audit or /npm-ci-audit <path>.
+description: Audits npm/pnpm/Yarn supply-chain hardening in GitHub Actions workflows. Primary focus on how the project's package manager is invoked in CI — install commands, registry integrity, manager version pinning, publish flow (OIDC + provenance), and uncontrolled install surface (npx, global installs). Secondary focus on generic GitHub Actions hardening (external action SHA pinning, token permissions, pull_request_target). Trigger with /supplychain:npm-ci-audit or /supplychain:npm-ci-audit <path>.
 ---
 
 ## Trigger
 
-Activate on `/npm-ci-audit` or `/npm-ci-audit <path>`. Treat path as repo root, or use cwd. GitHub Actions only — GitLab CI, CircleCI, Jenkins out of scope in v1.
+Activate on `/supplychain:npm-ci-audit` or `/supplychain:npm-ci-audit <path>`. Treat path as repo root, or use cwd. GitHub Actions only — GitLab CI, CircleCI, Jenkins out of scope in v1.
 
 ## Step 1 — collect signals
 
@@ -205,7 +205,7 @@ Apply the highest-severity finding's icon to the section header. Render the NPM 
 **Structure:**
 
 ```
-/npm-ci-audit · [repo name] (GitHub Actions · [MGR] [PROJECT_MGR_VERSION])
+/supplychain:npm-ci-audit · [repo name] (GitHub Actions · [MGR] [PROJECT_MGR_VERSION])
 🚨 N critical  🔶 N failing  ⚡ N hardening  ✅ N passing
 → [top fix]
 📖 Hardening guide: https://docs.github.com/en/actions/reference/security/secure-use

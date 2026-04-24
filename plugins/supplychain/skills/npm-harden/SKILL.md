@@ -1,11 +1,11 @@
 ---
 name: npm-harden
-description: Hardens npm, pnpm, and Yarn v2+ projects against supply chain attacks. Audits package manager configuration, version pinning, and lockfile hygiene against 2025-2026 attack patterns. Trigger with /npm-harden or /npm-harden <path>.
+description: Hardens npm, pnpm, and Yarn v2+ projects against supply chain attacks. Audits package manager configuration, version pinning, and lockfile hygiene to protect the npm supply chain. Trigger with /supplychain:npm-harden or /supplychain:npm-harden <path>.
 ---
 
 ## Trigger
 
-Activate on `/npm-harden` or `/npm-harden <path>`. Treat the path as project root, or use cwd.
+Activate on `/supplychain:npm-harden` or `/supplychain:npm-harden <path>`. Treat the path as project root, or use cwd.
 
 ## Step 1 — detect manager
 
@@ -146,7 +146,7 @@ If `>0`: read `PKG_NAME` to determine internal scope (e.g. `@eyectrl-engineering
 Verdicts — ranges are the belt-and-suspenders layer. Release-age + lockfile + CI frozen-install carry the primary weight; when those three hold, ranges are a reproducibility concern, not an acute supply-chain risk.
 
 - All internal → ⚡ WARN "internal `^`/`~` ranges — tighten to exact for reproducibility; supply-chain risk already contained by lockfile + CI frozen install."
-- Any external + `PM-4=PASS` (lockfile committed + not gitignored) → ⚡ WARN "external `^`/`~` ranges present. Committed lockfile contains the acute risk; remaining exposure is manual `npm/pnpm/yarn install` or `update` calls by developers that bypass the lockfile. Run `/npm-ci-audit` to verify CI enforces `--frozen-lockfile` / `--immutable`. Pin to exact versions for defence-in-depth." List up to 5 external from `RANGES`; 6+ → count + first 5.
+- Any external + `PM-4=PASS` (lockfile committed + not gitignored) → ⚡ WARN "external `^`/`~` ranges present. Committed lockfile contains the acute risk; remaining exposure is manual `npm/pnpm/yarn install` or `update` calls by developers that bypass the lockfile. Run `/supplychain:npm-ci-audit` to verify CI enforces `--frozen-lockfile` / `--immutable`. Pin to exact versions for defence-in-depth." List up to 5 external from `RANGES`; 6+ → count + first 5.
 - Any external + `PM-4=FAIL` (lockfile absent or gitignored) → 🔶 FAIL "external `^`/`~` ranges combined with the PM-4 lockfile gap — unfrozen install resolves fresh from registry and a malicious patch cleared of the release-age gate lands automatically." List up to 5 external.
 
 Config tie-ins (print under the finding as additional `└─` lines if applicable):
@@ -193,7 +193,7 @@ Apply the same icon to the section header as to its highest-severity item.
 **Structure:**
 
 ```
-/npm-harden · [project name] ([manager] [version])
+/supplychain:npm-harden · [project name] ([manager] [version])
 🚨 N critical  🔶 N failing  ⚡ N hardening  ✅ N passing
 → [top fix]
 📖 Hardening guide: [manager docs URL — see table below]
