@@ -15,7 +15,7 @@
 
 ## What is supplychain?
 
-A growing set of skills that audit and harden JavaScript projects against dependency-chain attacks — package manager config, version pinning, lockfile hygiene, lifecycle scripts, and (planned) CI pipeline surface.
+A growing set of skills that audit and harden JavaScript projects against dependency-chain attacks — package manager config, version pinning, lockfile hygiene, lifecycle scripts, and GitHub Actions CI pipeline surface.
 
 ## What to expect
 
@@ -23,6 +23,8 @@ A growing set of skills that audit and harden JavaScript projects against depend
 |---------|------------------|
 | `/npm-harden` | Audits the current project's package manager config and outputs a prioritised fix list (CRITICAL → HARDENING → PASSING) |
 | `/npm-harden ./apps/web` | Same, against a specific project root |
+| `/ci-supplychain` | Audits `.github/workflows/**` — action pinning, token permissions, `pull_request_target` safety, install-script flags, Dependabot, npm OIDC |
+| `/ci-supplychain ./repo` | Same, against a specific repo root |
 
 ## Install
 
@@ -33,7 +35,7 @@ See the [eyesecurity/skills README](../../README.md) for installation instructio
 | Skill | Trigger | Scope | Status |
 |-------|---------|-------|--------|
 | **npm-harden** | `/npm-harden [path]` | Local project config — npm, pnpm, Yarn v2+ | shipped |
-| *ci-supplychain-audit* | `/ci-supplychain` | `.github/workflows/**` — action pinning, OIDC, `pull_request_target`, secret handling | planned |
+| **ci-supplychain-audit** | `/ci-supplychain [path]` | `.github/workflows/**` — action SHA pinning, permissions, `pull_request_target`, `--frozen-lockfile` + `--ignore-scripts`, Dependabot, npm OIDC trusted publishing, Harden-Runner | shipped |
 | *postinstall-scan* | `/postinstall-scan` | `package.json.scripts` + transitive lifecycle hooks (curl\|sh, eval, base64) | planned |
 | *npmrc-secrets* | `/npmrc-secrets` | Committed auth tokens in `.npmrc` | planned |
 | *aliases-overrides* | `/aliases-overrides` | npm aliases, `overrides` / `resolutions` / `pnpm.overrides` | planned |
@@ -60,8 +62,10 @@ supplychain/
 ├── .claude-plugin/
 │   └── plugin.json               # Claude Code plugin manifest
 └── skills/
-    └── npm-harden/
-        └── SKILL.md              # Shipped skill
+    ├── npm-harden/
+    │   └── SKILL.md              # Local project hardening
+    └── ci-supplychain-audit/
+        └── SKILL.md              # GitHub Actions CI hardening
 ```
 
 ## License
