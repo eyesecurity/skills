@@ -139,7 +139,7 @@ If `>0`: read `PKG_NAME` to determine internal scope (e.g. `@eyectrl-engineering
 Verdicts — ranges are the belt-and-suspenders layer. Release-age + lockfile + CI frozen-install carry the primary weight; when those three hold, ranges are a reproducibility concern, not an acute supply-chain risk.
 
 - All internal → ⚡ WARN "internal `^`/`~` ranges — tighten to exact for reproducibility; supply-chain risk already contained by lockfile + CI frozen install."
-- Any external + `PM-4=PASS` (lockfile committed + not gitignored) → ⚡ WARN "external `^`/`~` ranges present. Committed lockfile contains the acute risk; remaining exposure is manual `npm/pnpm/yarn install` or `update` calls by developers that bypass the lockfile. Run `/ci-supplychain` to verify CI enforces `--frozen-lockfile` / `--immutable`. Pin to exact versions for defence-in-depth." List up to 5 external from `RANGES`; 6+ → count + first 5.
+- Any external + `PM-4=PASS` (lockfile committed + not gitignored) → ⚡ WARN "external `^`/`~` ranges present. Committed lockfile contains the acute risk; remaining exposure is manual `npm/pnpm/yarn install` or `update` calls by developers that bypass the lockfile. Run `/npm-ci-audit` to verify CI enforces `--frozen-lockfile` / `--immutable`. Pin to exact versions for defence-in-depth." List up to 5 external from `RANGES`; 6+ → count + first 5.
 - Any external + `PM-4=FAIL` (lockfile absent or gitignored) → 🔶 FAIL "external `^`/`~` ranges combined with the PM-4 lockfile gap — unfrozen install resolves fresh from registry and a malicious patch cleared of the release-age gate lands automatically." List up to 5 external.
 
 Config tie-ins (print under the finding as additional `└─` lines if applicable):

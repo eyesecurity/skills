@@ -1,11 +1,11 @@
 ---
-name: ci-supplychain-audit
-description: Audits GitHub Actions workflows for supply-chain hardening — action pinning to commit SHA, least-privilege permissions, pull_request_target safety, install-script flag enforcement (npm/pnpm/Yarn v1/v2+), Dependabot coverage, and npm OIDC trusted publishing. Trigger with /ci-supplychain or /ci-supplychain <path>.
+name: npm-ci-audit
+description: Audits GitHub Actions workflows for supply-chain hardening — action pinning to commit SHA, least-privilege permissions, pull_request_target safety, install-script flag enforcement (npm/pnpm/Yarn v1/v2+), Dependabot coverage, and npm OIDC trusted publishing. Trigger with /npm-ci-audit or /npm-ci-audit <path>.
 ---
 
 ## Trigger
 
-Activate on `/ci-supplychain` or `/ci-supplychain <path>`. Treat path as repo root, or use cwd. GitHub Actions only — GitLab CI, CircleCI, Jenkins out of scope in v1.
+Activate on `/npm-ci-audit` or `/npm-ci-audit <path>`. Treat path as repo root, or use cwd. GitHub Actions only — GitLab CI, CircleCI, Jenkins out of scope in v1.
 
 ## Step 1 — collect signals
 
@@ -126,7 +126,7 @@ Apply the highest-severity finding's icon to the section header.
 **Structure:**
 
 ```
-/ci-supplychain · [repo name] (GitHub Actions · [MGR])
+/npm-ci-audit · [repo name] (GitHub Actions · [MGR])
 🚨 N critical  🔶 N failing  ⚡ N hardening  ✅ N passing
 → [top fix]
 📖 Hardening guide: https://docs.github.com/en/actions/reference/security/secure-use
