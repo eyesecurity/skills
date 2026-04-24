@@ -136,13 +136,11 @@ Read `RANGE_TOTAL`. `0` → ✅ PASS immediately, no further processing.
 
 If `>0`: read `PKG_NAME` to determine internal scope (e.g. `@eyectrl-engineering`, `@eye`). Classify each entry in `RANGES` as internal (matches own scope) or external.
 
-Verdicts (never 🚨 CRITICAL — release-age + lockfile carry the critical weight; ranges are the belt-and-suspenders):
-- All internal → ⚡ WARN "internal `^`/`~` ranges — tighten to exact for reproducibility; low supply-chain risk while scope is private."
-- 1–5 external → 🔶 FAIL, list them inline. "external `^`/`~` ranges resolve to latest-matching on any unfrozen install — a malicious patch cleared of the release-age gate lands automatically."
-- 6+ external → 🔶 FAIL, print count + first 5 from `RANGES`.
+Verdicts — ranges are the belt-and-suspenders layer. Release-age + lockfile + CI frozen-install carry the primary weight; when those three hold, ranges are a reproducibility concern, not an acute supply-chain risk.
 
-Qualify with PM-4:
-- `PM-4=PASS` (lockfile committed + not gitignored) → append note "lower risk while CI uses `--frozen-lockfile`; risk lives in manual `npm/pnpm/yarn install` and `update` calls by developers."
+- All internal → ⚡ WARN "internal `^`/`~` ranges — tighten to exact for reproducibility; supply-chain risk already contained by lockfile + CI frozen install."
+- Any external + `PM-4=PASS` (lockfile committed + not gitignored) → ⚡ WARN "external `^`/`~` ranges present. Committed lockfile contains the acute risk; remaining exposure is manual `npm/pnpm/yarn install` or `update` calls by developers that bypass the lockfile. Run `/ci-supplychain` to verify CI enforces `--frozen-lockfile` / `--immutable`. Pin to exact versions for defence-in-depth." List up to 5 external from `RANGES`; 6+ → count + first 5.
+- Any external + `PM-4=FAIL` (lockfile absent or gitignored) → 🔶 FAIL "external `^`/`~` ranges combined with the PM-4 lockfile gap — unfrozen install resolves fresh from registry and a malicious patch cleared of the release-age gate lands automatically." List up to 5 external.
 
 Config tie-ins (print under the finding as additional `└─` lines if applicable):
 - npm: `NPMRC` missing `save-exact=true` → add ⚡ WARN note and suggest `└─ .npmrc: save-exact=true`.
@@ -164,7 +162,7 @@ No separate check results block. Each check appears exactly once inside its cate
 
 **Icon system — shape and color both carry meaning:**
 - 🚨 CRITICAL — any of: unpatched CVE in installed tooling; dangerouslyAllowAllBuilds: true; npm ignore-scripts absent (scripts run by default — primary attack vector); release age not configured on any manager; minimumReleaseAgeExclude set without minimumReleaseAge (false security posture); lockfile gitignored. Do not use for optional hardening gaps.
-- 🔶 FAIL — real gap needing a fix (Yarn Classic, lockfile absent, external `^`/`~` ranges)
+- 🔶 FAIL — real gap needing a fix (Yarn Classic, lockfile absent, exotic deps with CVE exposure, external ranges + lockfile gap)
 - ⚡ WARN — hardening opportunity, not immediately exploitable
 - ✅ PASS — clean, shown last
 - ➖ N/A
