@@ -1,6 +1,6 @@
 ---
 name: npm-ci-audit
-description: Audits npm/pnpm/Yarn supply-chain hardening in GitHub Actions workflows. Primary focus on how the project's package manager is invoked in CI — install commands, registry integrity, manager version pinning, publish flow (OIDC + provenance), and uncontrolled install surface (npx, global installs). Secondary focus on generic GitHub Actions hardening (action SHA pinning, token permissions, pull_request_target, Harden-Runner). Trigger with /npm-ci-audit or /npm-ci-audit <path>.
+description: Audits npm/pnpm/Yarn supply-chain hardening in GitHub Actions workflows. Primary focus on how the project's package manager is invoked in CI — install commands, registry integrity, manager version pinning, publish flow (OIDC + provenance), and uncontrolled install surface (npx, global installs). Secondary focus on generic GitHub Actions hardening (external action SHA pinning, token permissions, pull_request_target). Trigger with /npm-ci-audit or /npm-ci-audit <path>.
 ---
 
 ## Trigger
@@ -64,8 +64,6 @@ echo "=== PUBLISH_CMDS ===" && grep -nHE '(npm publish|pnpm publish|yarn (npm )?
 echo "=== PROVENANCE ===" && grep -nHE '(--provenance|NPM_CONFIG_PROVENANCE)' $W/*.yml $W/*.yaml 2>/dev/null
 echo "=== NODE_AUTH ===" && grep -nHE 'NODE_AUTH_TOKEN|NPM_TOKEN' $W/*.yml $W/*.yaml 2>/dev/null
 
-# Generic hardening
-echo "=== HARDEN_RUNNER ===" && grep -nHE 'step-security/harden-runner' $W/*.yml $W/*.yaml 2>/dev/null
 ```
 
 If `WORKFLOWS_DIR=MISSING` or `WORKFLOW_COUNT=0`: emit `➖ no GitHub Actions workflows found — nothing to audit` and stop. Do not run Step 2/3.
@@ -196,11 +194,6 @@ The trigger runs with base-repo secrets on forked-PR events. The s1ngularity inc
 - `TRIGGER_WFR` present → ⚡ WARN "`workflow_run` chains inherit the upstream workflow's privileged context — review the same way as `pull_request_target`."
 - Both absent → ✅ PASS.
 
-**CI-4 Runtime hardening (Harden-Runner)**
-
-- `HARDEN_RUNNER` present in any workflow → ✅ PASS "step-security/harden-runner detected — runtime egress monitoring in place."
-- Absent → ⚡ WARN "no runtime egress monitoring — `step-security/harden-runner` as the first step of each job blocks unexpected outbound connections during `npm install`. Would have caught the tj-actions/changed-files exfiltration to an attacker-controlled endpoint (CVE-2025-30066, Mar 2025) and the @bitwarden/cli 2026.4.0 exfil to audit.checkmarx.cx (Apr 2026)."
-
 ## Step 4 — output format
 
 **HARD STOP: output ends after ✅ PASSING. No patch files, no workflow YAML blocks, no "Want me to apply?". Fixes are specified inline per check.**
@@ -223,7 +216,7 @@ Apply the highest-severity finding's icon to the section header. Render the NPM 
 
 Omit zero-count categories from line 2. If nothing to audit: `➖ no workflows found`. If everything passes: `✅ all passing`.
 
-Line 2 counts *checks* — NPM-1..NPM-6 plus CI-1..CI-4.
+Line 2 counts *checks* — NPM-1..NPM-6 plus CI-1..CI-3.
 
 **Fix-line format** — identical to `npm-harden`:
 

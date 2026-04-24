@@ -35,7 +35,7 @@ See the [eyesecurity/skills README](../../README.md) for installation instructio
 | Skill | Trigger | Scope | Status |
 |-------|---------|-------|--------|
 | **npm-harden** | `/npm-harden [path]` | Local project config — npm, pnpm, Yarn v2+ | shipped |
-| **npm-ci-audit** | `/npm-ci-audit [path]` | npm/pnpm/Yarn supply chain **in GitHub Actions** — install flags, registry integrity, manager version consistency, OIDC + provenance, uncontrolled surface (`npx` / global installs), Dependabot npm. Plus generic Actions hardening (SHA pinning, permissions, `pull_request_target`, Harden-Runner). | shipped |
+| **npm-ci-audit** | `/npm-ci-audit [path]` | npm/pnpm/Yarn supply chain **in GitHub Actions** — install flags, registry integrity, manager version consistency, OIDC + provenance, uncontrolled surface (`npx` / global installs), Dependabot npm. Plus generic Actions hardening (external action SHA pinning, permissions, `pull_request_target`). | shipped |
 | *postinstall-scan* | `/postinstall-scan` | `package.json.scripts` + transitive lifecycle hooks (curl\|sh, eval, base64) | planned |
 | *npmrc-secrets* | `/npmrc-secrets` | Committed auth tokens in `.npmrc` | planned |
 | *aliases-overrides* | `/aliases-overrides` | npm aliases, `overrides` / `resolutions` / `pnpm.overrides` | planned |
