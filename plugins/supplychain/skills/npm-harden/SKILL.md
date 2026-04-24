@@ -37,7 +37,7 @@ echo "MGR=npm"
 echo "LOCKFILE=$(ls package-lock.json 2>/dev/null && echo PRESENT || echo ABSENT)"
 echo "LOCKFILE_GITIGNORED=$(grep -qE 'package-lock' .gitignore 2>/dev/null && echo YES || echo NO)"
 echo "PKG_MANAGER_FIELD=$(grep -oE '"packageManager":\s*"[^"]*"' package.json 2>/dev/null | grep -oE '[a-z]+@[0-9][^"]*' || echo NOT_SET)"
-echo "=== NPMRC ===" && grep -E "ignore-scripts|min-release-age|save-exact" .npmrc 2>/dev/null || echo "NOT_SET"
+echo "=== NPMRC ===" && grep -E "ignore-scripts|min-release-age|minimum-release-age|minimumReleaseAge|save-exact" .npmrc 2>/dev/null || echo "NOT_SET"
 echo "=== EXOTIC_DEPS ===" && grep -oE '"[^"]+": "(git\+?https?://[^"]+|github:[^"]+|bitbucket:[^"]+|gitlab:[^"]+|[^"]+\.tgz|file:\.\.)"' package.json 2>/dev/null || echo "NONE"
 ```
 
@@ -87,7 +87,7 @@ Yarn v2+:
 
 Read RELEASE_AGE extraction (and GLOBAL_RELEASE_AGE for pnpm). Normalise to days for output.
 
-Unit conversion: pnpm value ÷ 1440 = days (10080 = 7d; if >43800 → WARN wrong unit). Yarn: parse string ("7d"/"1w"/"168h" = 7d; raw int → WARN ambiguous unit). npm: value already days.
+Unit conversion: pnpm value ÷ 1440 = days (10080 = 7d; if >43800 → WARN wrong unit). Yarn: parse string ("7d"/"1w"/"168h" = 7d; raw int → WARN ambiguous unit). npm: value ÷ 86400 = days (seconds, since npm v11.10.0; 604800 = 7d). Key in `.npmrc` accepted as `min-release-age`, `minimum-release-age`, or camelCase `minimumReleaseAge`.
 
 Verdicts — apply to the *effective* value after conversion:
 - NOT_SET with no exclude list → 🚨 CRITICAL "release age: 0d — every newly published version installs immediately. e.g. Axios 1.14.1 (Mar 2026) was live for 3h, Shai-Hulud 2.0 (Nov 2025) for 12h, chalk/debug (Sep 2025) for 2.5h — all would have landed."
