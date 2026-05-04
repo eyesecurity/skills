@@ -1,5 +1,5 @@
 {
   "name": "supplychain",
-  "description": "Protects the npm supply chain — hardens npm, pnpm, and Yarn v2+ projects locally and in GitHub Actions CI.",
+  "description": "Protects the npm and PyPI supply chains — hardens npm/pnpm/Yarn v2+ and uv/pip/Poetry/pdm projects locally and in GitHub Actions CI.",
   "skills": "./skills/"
 }
