@@ -5,3 +5,4 @@ This repo contains AI agent skills by Eye Security. Each plugin lives in `plugin
 Read the SKILL.md for the plugin you need:
 
 - **complisec** — `plugins/complisec/SKILL.md`
+- **supplychain** — `plugins/supplychain/skills/npm-harden/SKILL.md`
