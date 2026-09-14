@@ -37,7 +37,7 @@ payload=$(cat)
 # jq is the only dependency. Say so in context rather than degrading quietly —
 # a silently inactive audit trail is the failure mode this hook exists to fix.
 command -v jq >/dev/null 2>&1 || inactive \
-  "complisec audit trail INACTIVE: jq is not installed, so the complisec hooks cannot write audit events. Tell the user to install jq to restore automatic ISO 27001 A.8.15 / NIS2 Art. 21 evidence. Until then every audit event must be written by hand per skills/audit-logging/SKILL.md."
+  "complisec audit trail INACTIVE: jq is not installed, so the complisec hooks cannot write audit events. Tell the user to install jq to restore automatic ISO 27001 A.8.15 / NIS2 Art. 21 evidence. Until then every audit event must be written by hand, per the complisec audit-logging skill."
 
 IFS="$AUDIT_FS" read -r session_id source payload_cwd transcript_path < <(
   jq -r 'def s(x): (x // "") | tostring;
@@ -90,6 +90,6 @@ audit_append "$(audit_log_path "$project_dir")" "$event"
 emit_context "complisec audit trail active for this session.
 trace_id: ${trace_id}
 Use this exact trace_id on every audit event you write this session. Do not generate a new one — a second trace splits the session's evidence in two.
-Audit log: .compliance/audit.log (append-only JSONL, one event per line, schema at skills/audit-logging/audit-event.schema.json).
+Audit log: .compliance/audit.log (append-only JSONL, one event per line).
 This session boundary has already been logged by the hook — do not log it again.
-Events the hook cannot see remain yours to write: decision records (ADRs), data_access, and error events. See skills/audit-logging/SKILL.md."
+Events the hook cannot see remain yours to write: decision records (ADRs), data_access, and error events. The complisec audit-logging skill has the format; it is a plugin skill, so invoke it by name rather than looking for it under this project."
