@@ -47,13 +47,15 @@ Most of complisec is guidance the agent applies. The audit trail is not — it i
 | `SessionStart` | A `session` / `start` event at every session boundary — startup, `--continue`/`--resume`, `/clear`, compaction, fork — and hands the agent the session `trace_id` so everything it logs afterwards correlates |
 | `PreToolUse` | A `tool_call` event for every tool request, including ones later denied |
 | `PostToolUse` | The matching result event, paired by `span_id`, with outcome and exit code |
+| `PostToolUseFailure` | The result event for a failed call — `PostToolUse` does not fire for those |
+| `PermissionDenied` | A `blocked` event for a call auto mode refused before it ran |
 
 Claude Code auto-discovers `hooks/hooks.json` when the plugin is installed — nothing to copy into `settings.json`, and it cannot drift out of sync with the skill.
 
 Three things to know:
 
 - **Opt-in per project.** The hooks write only where `.compliance/` already exists, so complisec does not drop an audit log into every repository you open. Run `/complisec setup` to onboard a project. When the trail is inactive, the SessionStart hook says so in context rather than failing quietly.
-- **Tool input is never logged.** Events record the tool name, target file path, permission mode and tool use id — never command lines or file contents, which can carry credentials into an append-only log.
+- **Tool input is never logged.** Events record the tool name, target file path, permission mode and tool use id — never command lines or file contents, which can carry credentials into an append-only log. The one opt-in is `COMPLISEC_AUDIT_DENY_REASON=1`, which records why a blocked call was blocked, accepting that the reason may quote the command.
 - **Hooks are a Claude Code feature.** On a platform without them — a zip uploaded to a chat, another agent — the audit trail falls back to the agent instructions in `skills/audit-logging/SKILL.md`. That is best-effort by construction, and an audit should say so.
 
 ## Requirements

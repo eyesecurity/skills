@@ -1,9 +1,14 @@
 #!/usr/bin/env bash
-# complisec — PreToolUse / PostToolUse audit hook.
+# complisec — PreToolUse / PostToolUse / PostToolUseFailure / PermissionDenied
+# audit hook.
 #
 # Makes steps 3-4 of the audit-logging skill ("log a tool_call event before and
 # after tool execution") deterministic instead of best-effort. One script serves
 # every tool event; it branches on hook_event_name.
+#
+# This hook writes nothing to stdout, deliberately. A PermissionDenied hook can
+# return hookSpecificOutput.retry to let the model retry a refused call, and an
+# audit control must observe what happened without ever altering it.
 #
 # The two events for one tool call share a span_id derived from tool_use_id, so
 # a request and its result join without any shared state between hook processes.
@@ -31,7 +36,8 @@ payload=$(cat)
 # Outcome detection is defensive: tool_response is an object for some tools and
 # a bare string for others, and an absent field simply reads as null.
 IFS="$AUDIT_FS" read -r hook_event session_id tool_name tool_use_id payload_cwd \
-                       permission_mode file_path detected_outcome exit_code < <(
+                       permission_mode file_path detected_outcome exit_code \
+                       deny_reason < <(
   jq -r 'def s(x): (x // "") | tostring;
          [ s(.hook_event_name),
            s(.session_id),
@@ -48,7 +54,8 @@ IFS="$AUDIT_FS" read -r hook_event session_id tool_name tool_use_id payload_cwd 
             then "failure" else "success" end),
            (if (.tool_response | type) == "object"
               and (.tool_response.exit_code | type) == "number"
-            then s(.tool_response.exit_code) else "" end)
+            then s(.tool_response.exit_code) else "" end),
+           s(.deny_reason)
          ] | @tsv | gsub("\t"; "\u001f")' <<<"$payload"
 )
 
@@ -86,12 +93,31 @@ case "$hook_event" in
     severity="LOW"
     summary="Tool failed: ${tool_name}"
     ;;
+  PermissionDenied)
+    # The permission system refused the call before it ran, so neither result
+    # event fires — without this the request would sit in the log unresolved,
+    # indistinguishable from a crash. "blocked" is the outcome a compliance
+    # reviewer filters for, and this is the only hook that produces it.
+    outcome="blocked"
+    severity="MEDIUM"
+    summary="Tool blocked by permission policy: ${tool_name}"
+    ;;
   *)
     outcome="$detected_outcome"
     summary="Tool completed: ${tool_name} (${outcome})"
     if [ "$outcome" = "failure" ]; then severity="LOW"; else severity="INFO"; fi
     ;;
 esac
+
+# deny_reason says why the call was refused, which is the most useful part of a
+# block event — but it can quote the command it refused, and this hook does not
+# log tool input. Off by default; set COMPLISEC_AUDIT_DENY_REASON=1 in the "env"
+# block of settings.json to record it where the org's risk appetite allows.
+if [ "${COMPLISEC_AUDIT_DENY_REASON:-0}" = "1" ]; then
+  logged_deny_reason="$deny_reason"
+else
+  logged_deny_reason=""
+fi
 
 event=$(jq -nc \
   --arg event_id "$(uuid4)" \
@@ -109,6 +135,7 @@ event=$(jq -nc \
   --arg tool_use_id "$tool_use_id" \
   --arg permission_mode "$permission_mode" \
   --arg hook_event "$hook_event" \
+  --arg deny_reason "$logged_deny_reason" \
   '{
      event_id: $event_id,
      timestamp: $timestamp,
@@ -126,6 +153,7 @@ event=$(jq -nc \
        tool_use_id: $tool_use_id,
        permission_mode: $permission_mode,
        hook_event: $hook_event,
+       deny_reason: $deny_reason,
        emitted_by: "complisec/hooks/audit-tool-call.sh"
      } | with_entries(select(.value != "")))
    }
