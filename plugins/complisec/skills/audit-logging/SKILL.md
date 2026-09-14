@@ -35,13 +35,25 @@ Each log entry is one JSON object per line, appended to `.compliance/audit.log`.
   "event_id": "uuid-v4",
   "timestamp": "ISO 8601",
   "trace_id": "hex-32",
-  "event_class": "tool_call | decision | data_access | error",
-  "activity": "read | write | classify | scan | block | approve",
+  "event_class": "session | tool_call | decision | data_access | error",
+  "activity": "start | read | write | execute | classify | scan | block | approve | assess",
   "severity": "INFO | LOW | MEDIUM | HIGH | CRITICAL",
   "outcome": "success | failure | blocked | deferred",
   "summary": "Human-readable one-liner"
 }
 ```
+
+### Event classes
+
+| Class | Emitted for | Activity |
+|-------|-------------|----------|
+| `session` | A session boundary: startup, resume, `/clear`, compaction, fork | `start` |
+| `tool_call` | A tool request and its result | `read`, `write`, `execute` |
+| `decision` | An Agent Decision Record — requires the `decision` block | `block`, `approve`, `assess` |
+| `data_access` | Classified data read or written | `read`, `write`, `classify`, `scan` |
+| `error` | A failure worth auditing on its own | any |
+
+`execute` is the conservative label for tools that are neither a clean read nor a clean write — shell commands, sub-agents, MCP calls — and the default for any tool not otherwise recognised. Never downgrade an unknown tool to `read`.
 
 ### Optional fields
 
@@ -99,14 +111,64 @@ When writing code, include structured logging for: auth events, authorization, d
 
 For the full operations table, correct/wrong code examples per language, what-not-to-log rules, and language-specific logger recommendations, see [references/logging-guide.md](references/logging-guide.md).
 
+## Automated enforcement (hooks)
+
+Parts of this skill do not depend on the agent remembering to act. complisec ships
+`hooks/hooks.json`, which Claude Code auto-discovers when the plugin is installed —
+no `settings.json` edit, nothing for the user to copy by hand.
+
+| Hook | Event written | Guarantee |
+|------|---------------|-----------|
+| `SessionStart` | `session` / `start` | Every session boundary — startup, `--continue`/`--resume`, `/clear`, compaction, fork |
+| `PreToolUse` | `tool_call`, `outcome: "deferred"` | Every tool request, whatever becomes of it |
+| `PostToolUse` | `tool_call`, `outcome: "success"` | Every successful tool result, with `exit_code` where the tool reports one |
+| `PostToolUseFailure` | `tool_call`, `outcome: "failure"` | Every failed tool call. `PostToolUse` does not fire for these, so without it a failure would sit in the log as a request that never resolved |
+| `PermissionDenied` | `tool_call`, `outcome: "blocked"` | A tool call refused by auto mode's classifier or auto-deny logic. The only producer of `blocked` — but see the limitation below |
+
+The request and its result share a `span_id` derived from the tool use id, so the
+two join without either hook process keeping state.
+
+**An unresolved `deferred` means the call did not run.** Most requests resolve to
+`success`, `failure` or `blocked`. The ones that do not were refused before
+execution, and not every refusal path emits an event: a refusal by an explicit
+`permissions.deny` rule fires no hook at all — verified by observation, not
+assumed — so the unresolved request is the only trace it leaves. Read a dangling
+`deferred` as "requested, never executed"; it is a real signal, not a gap in the
+log.
+
+`deny_reason` explains why a call was blocked, and it is the most useful part of
+a block event — but it can quote the command it refused, which this hook
+otherwise never logs. It is **off by default**. Where the org's risk appetite
+allows it, turn it on in the `env` block of `.claude/settings.json`:
+
+```json
+{ "env": { "COMPLISEC_AUDIT_DENY_REASON": "1" } }
+```
+
+**Tool input is never logged.** The hooks record the tool name, the target
+`file_path`, the permission mode, and the `tool_use_id` — nothing else from
+`tool_input`. A shell command line or a file payload can carry a credential, and
+this log is append-only with a retention floor measured in months. The
+`tool_use_id` joins the event to the transcript, which is where the detail
+already lives. Hold the same line in any event you write by hand.
+
+The audit trail is **opt-in per project**: the hooks write only where `.compliance/`
+exists, so a globally installed complisec does not drop an audit log into unrelated
+repositories. When it is not active, the SessionStart hook says so in your context
+instead of failing quietly — surface that to the user.
+
+The SessionStart hook also puts the session `trace_id` in your context. It is derived
+from the Claude Code session id, so it is stable across `/clear` and compaction, and
+every hook reaches the same value without shared state.
+
 ## Agent instructions
 
 Follow this process every session:
 
-1. **Session start** — generate a `trace_id` (32-char hex). Use it for all events in this session.
+1. **Session start** — the SessionStart hook has already written the `session`/`start` event and placed the session `trace_id` in your context. **Adopt that `trace_id` verbatim** for every event you write — minting a second one splits the session's evidence across two traces. Generate one yourself only if no hook context was provided (a platform without hook support).
 2. **Per step** — generate a `span_id` (16-char hex) for each discrete operation.
-3. **Before tool execution** — log a `tool_call` event with the tool name.
-4. **After tool execution** — update with outcome and exit code.
+3. **Tool calls** — the PreToolUse and PostToolUse hooks write both events for every tool call. **Do not write them yourself**: a duplicate inflates the count and breaks the request/result pairing an auditor reads.
+4. **Activity mapping** — when you do write a `tool_call` event by hand (a platform without hook support), map the tool to `read`, `write`, or `execute`, and default anything unrecognised to `execute`.
 5. **On any decision involving classified data** — create an ADR with the decision block.
 6. **Append** each event as a single JSON line to `.compliance/audit.log`.
 7. **PROACTIVE — when writing code**: Whenever you generate, write, or modify source code, you MUST include proper structured audit logging following the rules above. This is not optional. Specifically:
