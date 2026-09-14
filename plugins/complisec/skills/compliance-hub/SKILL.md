@@ -128,13 +128,52 @@ aws s3 cp .compliance/audit.log \
   s3://my-org-compliance-logs/audit/2026-03-16.log
 ```
 
-For continuous sync, use a post-session hook or cron job:
+For continuous sync, run the push from a `SessionEnd` hook so it happens at every
+session boundary instead of whenever someone remembers. This one belongs in the
+user's own `.claude/settings.json` rather than in the plugin — the bucket, region
+and credentials are site-specific:
+
+```json
+{
+  "hooks": {
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PROJECT_DIR}/.claude/hooks/push-compliance-records.sh",
+            "timeout": 120
+          }
+        ]
+      }
+    ]
+  }
+}
+```
 
 ```bash
-# Sync all compliance records to cloud
-aws s3 sync .compliance/ s3://my-org-compliance-logs/ \
+#!/usr/bin/env bash
+# .claude/hooks/push-compliance-records.sh
+set -uo pipefail
+cd "${CLAUDE_PROJECT_DIR:-$PWD}" || exit 0
+[ -d .compliance ] || exit 0
+
+# Sync all compliance records to cloud. profile.json stays local — it is
+# configuration, not a record, and it describes the org's crown jewels.
+aws s3 sync .compliance/ "s3://${COMPLISEC_LOG_BUCKET}/" \
   --exclude "profile.json" --exclude "skills/*"
 ```
+
+Exit 0 on every path: a sync failure should not break the user's editor. If the
+push is business-critical, alert from the bucket side (a missing daily object) —
+not from the hook.
+
+A cron job is the alternative when sessions are long-running or the machine is
+frequently offline at session end.
+
+> The audit events themselves are already written by hooks that ship with
+> complisec — see `skills/audit-logging/SKILL.md`. This hook only moves records
+> that already exist off the machine.
 
 ### Add to org profile
 
