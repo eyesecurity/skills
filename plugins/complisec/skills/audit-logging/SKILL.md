@@ -111,11 +111,30 @@ When writing code, include structured logging for: auth events, authorization, d
 
 For the full operations table, correct/wrong code examples per language, what-not-to-log rules, and language-specific logger recommendations, see [references/logging-guide.md](references/logging-guide.md).
 
+## Automated enforcement (hooks)
+
+Parts of this skill do not depend on the agent remembering to act. complisec ships
+`hooks/hooks.json`, which Claude Code auto-discovers when the plugin is installed —
+no `settings.json` edit, nothing for the user to copy by hand.
+
+| Hook | Event written | Guarantee |
+|------|---------------|-----------|
+| `SessionStart` | `session` / `start` | Every session boundary — startup, `--continue`/`--resume`, `/clear`, compaction, fork |
+
+The audit trail is **opt-in per project**: the hooks write only where `.compliance/`
+exists, so a globally installed complisec does not drop an audit log into unrelated
+repositories. When it is not active, the SessionStart hook says so in your context
+instead of failing quietly — surface that to the user.
+
+The SessionStart hook also puts the session `trace_id` in your context. It is derived
+from the Claude Code session id, so it is stable across `/clear` and compaction, and
+every hook reaches the same value without shared state.
+
 ## Agent instructions
 
 Follow this process every session:
 
-1. **Session start** — generate a `trace_id` (32-char hex). Use it for all events in this session.
+1. **Session start** — the SessionStart hook has already written the `session`/`start` event and placed the session `trace_id` in your context. **Adopt that `trace_id` verbatim** for every event you write — minting a second one splits the session's evidence across two traces. Generate one yourself only if no hook context was provided (a platform without hook support).
 2. **Per step** — generate a `span_id` (16-char hex) for each discrete operation.
 3. **Before tool execution** — log a `tool_call` event with the tool name.
 4. **After tool execution** — update with outcome and exit code.
