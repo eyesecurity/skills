@@ -99,11 +99,13 @@ Yarn v2+:
 
 Read RELEASE_AGE extraction (and GLOBAL_RELEASE_AGE for pnpm). Normalise to days for output.
 
-Unit conversion: pnpm value ÷ 1440 = days (10080 = 7d; if >43800 → WARN wrong unit). Yarn: parse string ("7d"/"1w"/"168h" = 7d; raw int → WARN ambiguous unit). npm `min-release-age`: value is days (7 = 7d), since npm v11.10.0; if >365 → WARN wrong unit. Key in `.npmrc` accepted as `min-release-age`, `minimum-release-age`, or camelCase `minimumReleaseAge`.
+Unit conversion: pnpm value ÷ 1440 = days (10080 = 7d; if >43800 → WARN wrong unit). Yarn: parse string ("7d"/"1w"/"168h" = 7d; raw int → WARN ambiguous unit). npm `min-release-age`: value is days (7 = 7d), since npm v11.10.0; if >365 → WARN wrong unit. Only `min-release-age` is a real npm option: npm stores unrecognised keys verbatim and never maps them onto real options, so `minimum-release-age` and camelCase `minimumReleaseAge` are inert.
 
 Effective value: project `RELEASE_AGE` takes precedence; if absent and `MGR=pnpm`, fall back to `GLOBAL_RELEASE_AGE`. Convert to days, then apply verdicts.
 
 Verdicts:
+- `MGR=npm`, `NPMRC` has `minimum-release-age` or `minimumReleaseAge` and no `min-release-age` → 🚨 CRITICAL "release-age key not recognised by npm — npm ignores unknown keys, so the gate is inactive and the configured value never applies; rename the key to `min-release-age` in .npmrc. e.g. Axios 1.14.1 (Mar 2026) was live for 3h, Shai-Hulud 2.0 (Nov 2025) for 12h, chalk/debug (Sep 2025) for 2.5h — all would have landed." Treat the value as NOT_SET in every verdict below; do not also emit the 0d finding.
+- `MGR=npm`, `NPMRC` has both `min-release-age` and one of the inert spellings → apply the verdicts below to `min-release-age`, plus ⚠️ WARN "inert duplicate key — npm ignores it; delete it from .npmrc so it stops implying the gate was raised."
 - Project NOT_SET, no exclude list, AND (npm/yarn OR pnpm global also NOT_SET/0) → 🚨 CRITICAL "release age: 0d — every newly published version installs immediately. e.g. Axios 1.14.1 (Mar 2026) was live for 3h, Shai-Hulud 2.0 (Nov 2025) for 12h, chalk/debug (Sep 2025) for 2.5h — all would have landed."
 - Project NOT_SET, pnpm `GLOBAL_RELEASE_AGE` ≥10080 (7d) → ✅ PASS + note "pnpm global config supplies minimumReleaseAge={N}d — consider committing to `pnpm-workspace.yaml` for team visibility and new-joiner parity."
 - Project NOT_SET, pnpm `GLOBAL_RELEASE_AGE` 1-6d → ⚠️ WARN "global config has release age <7d — raise to 10080 and commit to workspace file."
@@ -180,7 +182,7 @@ Fix line:
 No separate check results block. Each check appears exactly once inside its category. PASSING goes last.
 
 **Icon system — shape and color both carry meaning:**
-- 🚨 CRITICAL — any of: unpatched CVE in installed tooling; dangerouslyAllowAllBuilds: true; npm ignore-scripts absent (scripts run by default — primary attack vector); release age not configured on any manager; minimumReleaseAgeExclude set without minimumReleaseAge (false security posture); lockfile gitignored. Do not use for optional hardening gaps.
+- 🚨 CRITICAL — any of: unpatched CVE in installed tooling; dangerouslyAllowAllBuilds: true; npm ignore-scripts absent (scripts run by default — primary attack vector); release age not configured on any manager; npm release-age key spelled so npm ignores it (gate inactive); minimumReleaseAgeExclude set without minimumReleaseAge (false security posture); lockfile gitignored. Do not use for optional hardening gaps.
 - 🔶 FAIL — real gap needing a fix (Yarn Classic, lockfile absent, exotic deps with CVE exposure, external ranges + lockfile gap)
 - ⚠️ WARN — hardening opportunity, not immediately exploitable
 - ✅ PASS — clean, shown last
