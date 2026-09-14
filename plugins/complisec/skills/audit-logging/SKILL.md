@@ -123,12 +123,18 @@ no `settings.json` edit, nothing for the user to copy by hand.
 | `PreToolUse` | `tool_call`, `outcome: "deferred"` | Every tool request, whatever becomes of it |
 | `PostToolUse` | `tool_call`, `outcome: "success"` | Every successful tool result, with `exit_code` where the tool reports one |
 | `PostToolUseFailure` | `tool_call`, `outcome: "failure"` | Every failed tool call. `PostToolUse` does not fire for these, so without it a failure would sit in the log as a request that never resolved |
-| `PermissionDenied` | `tool_call`, `outcome: "blocked"` | Every tool call auto mode refused before execution. The only producer of `blocked` |
+| `PermissionDenied` | `tool_call`, `outcome: "blocked"` | A tool call refused by auto mode's classifier or auto-deny logic. The only producer of `blocked` — but see the limitation below |
 
 The request and its result share a `span_id` derived from the tool use id, so the
-two join without either hook process keeping state. Every `deferred` request
-should have a matching result — `success`, `failure`, or `blocked`. A request
-still left unresolved is a call refused outside auto mode, where no hook fires.
+two join without either hook process keeping state.
+
+**An unresolved `deferred` means the call did not run.** Most requests resolve to
+`success`, `failure` or `blocked`. The ones that do not were refused before
+execution, and not every refusal path emits an event: a refusal by an explicit
+`permissions.deny` rule fires no hook at all — verified by observation, not
+assumed — so the unresolved request is the only trace it leaves. Read a dangling
+`deferred` as "requested, never executed"; it is a real signal, not a gap in the
+log.
 
 `deny_reason` explains why a call was blocked, and it is the most useful part of
 a block event — but it can quote the command it refused, which this hook

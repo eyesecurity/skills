@@ -48,7 +48,7 @@ Most of complisec is guidance the agent applies. The audit trail is not — it i
 | `PreToolUse` | A `tool_call` event for every tool request, including ones later denied |
 | `PostToolUse` | The matching result event, paired by `span_id`, with outcome and exit code |
 | `PostToolUseFailure` | The result event for a failed call — `PostToolUse` does not fire for those |
-| `PermissionDenied` | A `blocked` event for a call auto mode refused before it ran |
+| `PermissionDenied` | A `blocked` event for a call auto mode's classifier refused before it ran. A refusal by an explicit `permissions.deny` rule fires no hook — that call stays in the log as a request with no result, which reads as "requested, never executed" |
 
 Claude Code auto-discovers `hooks/hooks.json` when the plugin is installed — nothing to copy into `settings.json`, and it cannot drift out of sync with the skill.
 
