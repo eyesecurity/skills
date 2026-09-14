@@ -99,7 +99,7 @@ Yarn v2+:
 
 Read RELEASE_AGE extraction (and GLOBAL_RELEASE_AGE for pnpm). Normalise to days for output.
 
-Unit conversion: pnpm value ÷ 1440 = days (10080 = 7d; if >43800 → WARN wrong unit). Yarn: parse string ("7d"/"1w"/"168h" = 7d; raw int → WARN ambiguous unit). npm: value ÷ 86400 = days (seconds, since npm v11.10.0; 604800 = 7d). Key in `.npmrc` accepted as `min-release-age`, `minimum-release-age`, or camelCase `minimumReleaseAge`.
+Unit conversion: pnpm value ÷ 1440 = days (10080 = 7d; if >43800 → WARN wrong unit). Yarn: parse string ("7d"/"1w"/"168h" = 7d; raw int → WARN ambiguous unit). npm `min-release-age`: value is days (7 = 7d), since npm v11.10.0. Key in `.npmrc` accepted as `min-release-age`, `minimum-release-age`, or camelCase `minimumReleaseAge`.
 
 Effective value: project `RELEASE_AGE` takes precedence; if absent and `MGR=pnpm`, fall back to `GLOBAL_RELEASE_AGE`. Convert to days, then apply verdicts.
 
