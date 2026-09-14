@@ -120,11 +120,14 @@ no `settings.json` edit, nothing for the user to copy by hand.
 | Hook | Event written | Guarantee |
 |------|---------------|-----------|
 | `SessionStart` | `session` / `start` | Every session boundary — startup, `--continue`/`--resume`, `/clear`, compaction, fork |
-| `PreToolUse` | `tool_call`, `outcome: "deferred"` | Every tool request, including ones later denied or blocked — `PostToolUse` never fires for those |
-| `PostToolUse` | `tool_call`, `outcome: "success"` / `"failure"` | Every tool result, with `exit_code` where the tool reports one |
+| `PreToolUse` | `tool_call`, `outcome: "deferred"` | Every tool request, including ones later denied — no result event fires for those |
+| `PostToolUse` | `tool_call`, `outcome: "success"` | Every successful tool result, with `exit_code` where the tool reports one |
+| `PostToolUseFailure` | `tool_call`, `outcome: "failure"` | Every failed tool call. `PostToolUse` does not fire for these, so without it a failure would sit in the log as a request that never resolved |
 
-The two events for one tool call share a `span_id` derived from the tool use id,
-so a request joins its result without either hook process keeping state.
+The request and its result share a `span_id` derived from the tool use id, so the
+two join without either hook process keeping state. Every `deferred` request
+should have a matching result; the ones that do not are the calls the permission
+system refused before execution.
 
 **Tool input is never logged.** The hooks record the tool name, the target
 `file_path`, the permission mode, and the `tool_use_id` — nothing else from

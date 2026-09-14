@@ -3,7 +3,7 @@
 #
 # Makes steps 3-4 of the audit-logging skill ("log a tool_call event before and
 # after tool execution") deterministic instead of best-effort. One script serves
-# both events; it branches on hook_event_name.
+# every tool event; it branches on hook_event_name.
 #
 # The two events for one tool call share a span_id derived from tool_use_id, so
 # a request and its result join without any shared state between hook processes.
@@ -68,18 +68,30 @@ case "$tool_name" in
     activity="execute" ;;
 esac
 
-if [ "$hook_event" = "PreToolUse" ]; then
-  # "deferred" = recorded at request time, resolution follows in the paired
-  # PostToolUse event with the same span_id. Logging the request too is what
-  # keeps a denied or blocked call visible: PostToolUse never fires for those.
-  outcome="deferred"
-  severity="INFO"
-  summary="Tool requested: ${tool_name}"
-else
-  outcome="$detected_outcome"
-  summary="Tool completed: ${tool_name} (${outcome})"
-  if [ "$outcome" = "failure" ]; then severity="LOW"; else severity="INFO"; fi
-fi
+case "$hook_event" in
+  PreToolUse)
+    # "deferred" = recorded at request time, resolution follows in the paired
+    # result event with the same span_id. Logging the request too is what keeps
+    # a denied call visible: neither result event fires for those.
+    outcome="deferred"
+    severity="INFO"
+    summary="Tool requested: ${tool_name}"
+    ;;
+  PostToolUseFailure)
+    # PostToolUse does not fire for a failed tool call — this event does, and
+    # without it every failure would be left as a request with no resolution.
+    # Its tool_response is often a bare string, so the outcome is taken from the
+    # event name rather than inferred from the response.
+    outcome="failure"
+    severity="LOW"
+    summary="Tool failed: ${tool_name}"
+    ;;
+  *)
+    outcome="$detected_outcome"
+    summary="Tool completed: ${tool_name} (${outcome})"
+    if [ "$outcome" = "failure" ]; then severity="LOW"; else severity="INFO"; fi
+    ;;
+esac
 
 event=$(jq -nc \
   --arg event_id "$(uuid4)" \
