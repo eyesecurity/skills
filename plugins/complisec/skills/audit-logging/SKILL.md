@@ -120,6 +120,18 @@ no `settings.json` edit, nothing for the user to copy by hand.
 | Hook | Event written | Guarantee |
 |------|---------------|-----------|
 | `SessionStart` | `session` / `start` | Every session boundary — startup, `--continue`/`--resume`, `/clear`, compaction, fork |
+| `PreToolUse` | `tool_call`, `outcome: "deferred"` | Every tool request, including ones later denied or blocked — `PostToolUse` never fires for those |
+| `PostToolUse` | `tool_call`, `outcome: "success"` / `"failure"` | Every tool result, with `exit_code` where the tool reports one |
+
+The two events for one tool call share a `span_id` derived from the tool use id,
+so a request joins its result without either hook process keeping state.
+
+**Tool input is never logged.** The hooks record the tool name, the target
+`file_path`, the permission mode, and the `tool_use_id` — nothing else from
+`tool_input`. A shell command line or a file payload can carry a credential, and
+this log is append-only with a retention floor measured in months. The
+`tool_use_id` joins the event to the transcript, which is where the detail
+already lives. Hold the same line in any event you write by hand.
 
 The audit trail is **opt-in per project**: the hooks write only where `.compliance/`
 exists, so a globally installed complisec does not drop an audit log into unrelated
@@ -136,8 +148,8 @@ Follow this process every session:
 
 1. **Session start** — the SessionStart hook has already written the `session`/`start` event and placed the session `trace_id` in your context. **Adopt that `trace_id` verbatim** for every event you write — minting a second one splits the session's evidence across two traces. Generate one yourself only if no hook context was provided (a platform without hook support).
 2. **Per step** — generate a `span_id` (16-char hex) for each discrete operation.
-3. **Before tool execution** — log a `tool_call` event with the tool name.
-4. **After tool execution** — update with outcome and exit code.
+3. **Tool calls** — the PreToolUse and PostToolUse hooks write both events for every tool call. **Do not write them yourself**: a duplicate inflates the count and breaks the request/result pairing an auditor reads.
+4. **Activity mapping** — when you do write a `tool_call` event by hand (a platform without hook support), map the tool to `read`, `write`, or `execute`, and default anything unrecognised to `execute`.
 5. **On any decision involving classified data** — create an ADR with the decision block.
 6. **Append** each event as a single JSON line to `.compliance/audit.log`.
 7. **PROACTIVE — when writing code**: Whenever you generate, write, or modify source code, you MUST include proper structured audit logging following the rules above. This is not optional. Specifically:
