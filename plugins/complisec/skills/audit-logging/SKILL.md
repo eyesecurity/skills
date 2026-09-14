@@ -35,13 +35,25 @@ Each log entry is one JSON object per line, appended to `.compliance/audit.log`.
   "event_id": "uuid-v4",
   "timestamp": "ISO 8601",
   "trace_id": "hex-32",
-  "event_class": "tool_call | decision | data_access | error",
-  "activity": "read | write | classify | scan | block | approve",
+  "event_class": "session | tool_call | decision | data_access | error",
+  "activity": "start | read | write | execute | classify | scan | block | approve | assess",
   "severity": "INFO | LOW | MEDIUM | HIGH | CRITICAL",
   "outcome": "success | failure | blocked | deferred",
   "summary": "Human-readable one-liner"
 }
 ```
+
+### Event classes
+
+| Class | Emitted for | Activity |
+|-------|-------------|----------|
+| `session` | A session boundary: startup, resume, `/clear`, compaction, fork | `start` |
+| `tool_call` | A tool request and its result | `read`, `write`, `execute` |
+| `decision` | An Agent Decision Record — requires the `decision` block | `block`, `approve`, `assess` |
+| `data_access` | Classified data read or written | `read`, `write`, `classify`, `scan` |
+| `error` | A failure worth auditing on its own | any |
+
+`execute` is the conservative label for tools that are neither a clean read nor a clean write — shell commands, sub-agents, MCP calls — and the default for any tool not otherwise recognised. Never downgrade an unknown tool to `read`.
 
 ### Optional fields
 
