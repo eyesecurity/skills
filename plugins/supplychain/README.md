@@ -40,7 +40,7 @@ See the [eyesecurity/skills README](../../README.md) for installation instructio
 | Skill | Trigger | Scope | Status |
 |-------|---------|-------|--------|
 | **npm-harden** | `/supplychain:npm-harden [path]` | Local project config — npm, pnpm, Yarn v2+ | shipped |
-| **pypi-harden** | `/supplychain:pypi-harden [path]` | Local project config — uv, pip / pip-tools, Poetry, pdm. Release-age gate (uv `exclude-newer`, pip 26.1 `--uploaded-prior-to=P7D`), lockfile + hash hygiene (PEP 751 `pylock.toml`, `--require-hashes`), sdist policy, dependency-confusion mitigations, exotic sources. | shipped |
+| **pypi-harden** | `/supplychain:pypi-harden [path]` | Local project config — uv, pip / pip-tools, Poetry, pdm. Release-age gate (uv `exclude-newer`, pip 26.1 `--uploaded-prior-to=P3D`), lockfile + hash hygiene (PEP 751 `pylock.toml`, `--require-hashes`), sdist policy, dependency-confusion mitigations, exotic sources. | shipped |
 | **ci-audit** | `/supplychain:ci-audit [path]` | npm and PyPI supply chain **in GitHub Actions** — install flags, registry integrity, manager version consistency, OIDC + provenance / PEP 740 attestations, uncontrolled surface (`npx` / `pipx` / `uvx` / `curl\|sh` / global installs), Dependabot npm + pip. Plus generic Actions hardening (external action SHA pinning, permissions, `pull_request_target`). | shipped |
 | *postinstall-scan* | `/postinstall-scan` | `package.json.scripts` + transitive lifecycle hooks; Python `__init__.py` import-time exec patterns (curl\|sh, eval, base64) | planned |
 | *npmrc-secrets* | `/npmrc-secrets` | Committed auth tokens in `.npmrc`, `.netrc`, `pip.conf`, `poetry.toml` | planned |
