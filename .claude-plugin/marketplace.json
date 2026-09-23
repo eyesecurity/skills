@@ -8,6 +8,11 @@
       "name": "complisec",
       "source": "./plugins/complisec",
       "description": "EU compliance enforcement for AI agents — NIS2, GDPR, ISO 27001"
+    },
+    {
+      "name": "vulnerability-research",
+      "source": "./plugins/vulnerability-research",
+      "description": "Structured vulnerability research for authorized security testing — the kitten process"
     }
   ]
 }
