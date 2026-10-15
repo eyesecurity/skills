@@ -38,9 +38,34 @@ See the [eyesecurity/skills README](../../README.md) for installation instructio
 
 See [`.compliance/profile.example.json`](.compliance/profile.example.json) for what an org profile looks like — a compact ~25-line JSON block capturing your critical assets, data residency, risk appetite, suppliers, and legal obligations.
 
-## Python requirement
+## What runs automatically
 
-Only the `nis2-gap-analysis` sub-skill needs Python 3.10+ (for the NIS2 applicability checker). Everything else is pure markdown — no dependencies.
+Most of complisec is guidance the agent applies. The audit trail is not — it is written by hooks, so the evidence exists whether or not the model remembered to write it.
+
+| Hook | Writes |
+|------|--------|
+| `SessionStart` | A `session` / `start` event at every session boundary — startup, `--continue`/`--resume`, `/clear`, compaction, fork — and hands the agent the session `trace_id` so everything it logs afterwards correlates |
+| `PreToolUse` | A `tool_call` event for every tool request, including ones later denied |
+| `PostToolUse` | The matching result event, paired by `span_id`, with outcome and exit code |
+| `PostToolUseFailure` | The result event for a failed call — `PostToolUse` does not fire for those |
+| `PermissionDenied` | A `blocked` event for a call auto mode's classifier refused before it ran. A refusal by an explicit `permissions.deny` rule fires no hook — that call stays in the log as a request with no result, which reads as "requested, never executed" |
+
+Claude Code auto-discovers `hooks/hooks.json` when the plugin is installed — nothing to copy into `settings.json`, and it cannot drift out of sync with the skill.
+
+Three things to know:
+
+- **Opt-in per project.** The hooks write only where `.compliance/` already exists, so complisec does not drop an audit log into every repository you open. Run `/complisec setup` to onboard a project. When the trail is inactive, the SessionStart hook says so in context rather than failing quietly.
+- **Tool input is never logged.** Events record the tool name, target file path, permission mode and tool use id — never command lines or file contents, which can carry credentials into an append-only log. The one opt-in is `COMPLISEC_AUDIT_DENY_REASON=1`, which records why a blocked call was blocked, accepting that the reason may quote the command.
+- **Hooks are a Claude Code feature.** On a platform without them — a zip uploaded to a chat, another agent — the audit trail falls back to the agent instructions in `skills/audit-logging/SKILL.md`. That is best-effort by construction, and an audit should say so.
+
+## Requirements
+
+| Dependency | Needed for |
+|------------|-----------|
+| `jq` | The audit hooks. Without it they write nothing and say so at session start. |
+| Python 3.10+ | The `nis2-gap-analysis` NIS2 applicability checker only. |
+
+Everything else is pure markdown — no dependencies.
 
 ## Skills
 
@@ -67,6 +92,11 @@ complisec/
 ├── README.md                     # This file
 ├── .claude-plugin/
 │   └── plugin.json               # Claude Code plugin manifest
+├── hooks/
+│   ├── hooks.json                # Auto-discovered by Claude Code — no settings.json edit
+│   ├── audit-lib.sh              # Shared helpers for the audit hooks
+│   ├── audit-session-start.sh    # SessionStart → session/start event + trace_id
+│   └── audit-tool-call.sh        # PreToolUse / PostToolUse → tool_call events
 ├── skills/
 │   ├── complisec/                # Entry skill (for plugin convention)
 │   ├── nis2-gap-analysis/        # NIS2 gap analysis + nis2_check.py

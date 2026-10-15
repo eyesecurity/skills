@@ -12,6 +12,7 @@
 |--------|-------------|
 | **[complisec](plugins/complisec/)** | EU compliance enforcement — NIS2, GDPR, ISO 27001 |
 | **[supplychain](plugins/supplychain/)** | Supply-chain security for JavaScript and Python projects — npm/pnpm/Yarn v2+/PypI hardening |
+| **[vulnerability-research](plugins/vulnerability-research/)** | Structured vulnerability research for authorized security testing — the kitten process |
 
 Each plugin has its own README with details and examples.
 

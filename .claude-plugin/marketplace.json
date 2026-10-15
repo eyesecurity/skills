@@ -13,6 +13,11 @@
       "name": "supplychain",
       "source": "./plugins/supplychain",
       "description": "Protects the npm supply chain — hardens npm / pnpm / Yarn v2+ and PyPi projects locally and in GitHub Actions CI."
+    },
+    {
+      "name": "vulnerability-research",
+      "source": "./plugins/vulnerability-research",
+      "description": "Structured vulnerability research for authorized security testing — the kitten process"
     }
   ]
 }
