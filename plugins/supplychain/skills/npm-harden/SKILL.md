@@ -73,7 +73,7 @@ From Step 1 output, compute the booleans below once and reference them by name i
 - `CVE_FLAG`: YES if `PNPM_VERSION` parses and is `< 10.26.2` (CVE-2025-69263/69264 unpatched). NO if parses and ≥. UNKNOWN if `PNPM_VERSION` empty/unparseable → emit ⚠️ WARN "pnpm binary not found on PATH — CVE version check skipped; ensure installed version ≥10.26.2". N/A if `MGR` ≠ pnpm.
 - `PKG_MGR_CVE`: YES if `PKG_MANAGER_FIELD` matches `pnpm@X.Y.Z` with X.Y.Z `< 10.26.2`. NO otherwise. Applies regardless of installed pnpm (project pin, not runtime).
 - `YARN_SCRIPTS_OFF`: YES if `YARN_VERSION` parses and is `≥ 4.14.0` (scripts-off default landed). NO if parses and `<`. UNKNOWN if empty → ⚠️ WARN "yarn binary not found — version check skipped". N/A if `MGR` ≠ yarn.
-- `YARN_DURATION_OK`: YES if `YARN_VERSION` parses and is `≥ 4.12.0` (`npmMinimalAgeGate` became a DURATION type, so "7d"-style strings are honoured). NO if parses and `<` (plain NUMBER read with parseInt — the suffix is dropped). UNKNOWN if empty. N/A if `MGR` ≠ yarn.
+- `YARN_DURATION_OK`: YES if `YARN_VERSION` parses and is `≥ 4.12.0` (`npmMinimalAgeGate` became a DURATION type, so "3d"-style strings are honoured). NO if parses and `<` (plain NUMBER read with parseInt — the suffix is dropped). UNKNOWN if empty. N/A if `MGR` ≠ yarn.
 - `AGE_DEFAULT`: the release age the manager enforces with nothing configured. `1d` if `MGR=pnpm` and `PNPM_VERSION` ≥ `11.0.0` (pnpm's `minimumReleaseAge` default became 1440 in v11), or `MGR=yarn` and `YARN_VERSION` ≥ `4.12.0` (Yarn 4.12 gave `npmMinimalAgeGate` a `1d` default — the same release as `YARN_DURATION_OK`). `0` for npm, pnpm <11, and Yarn <4.12. UNKNOWN if the manager version is empty/unparseable.
 
 ## Step 2 — version rules
@@ -103,26 +103,26 @@ Yarn v2+:
 
 Read `RELEASE_AGE` — every manager emits it, from `.npmrc`, `.yarnrc.yml`, or `pnpm-workspace.yaml` as appropriate — plus `GLOBAL_RELEASE_AGE` for pnpm. Normalise to days for output.
 
-Unit conversion: pnpm value ÷ 1440 = days (10080 = 7d; if >43800 → WARN wrong unit). Yarn `npmMinimalAgeGate`: bare number = minutes ÷ 1440 = days (10080 = 7d) on every version. Duration strings ("7d"/"1w"/"168h") are only honoured on Yarn ≥4.12 — see the verdict below. npm `min-release-age`: value is days (7 = 7d), since npm v11.10.0; if >365 → WARN wrong unit. Only `min-release-age` is a real npm option: npm stores unrecognised keys verbatim and never maps them onto real options, so `minimum-release-age` and camelCase `minimumReleaseAge` are inert.
+Unit conversion: pnpm value ÷ 1440 = days (4320 = 3d; if >43800 → WARN wrong unit). Yarn `npmMinimalAgeGate`: bare number = minutes ÷ 1440 = days (4320 = 3d) on every version. Duration strings ("3d"/"72h"/"1w") are only honoured on Yarn ≥4.12 — see the verdict below. npm `min-release-age`: value is days (3 = 3d), since npm v11.10.0; if >365 → WARN wrong unit. Only `min-release-age` is a real npm option: npm stores unrecognised keys verbatim and never maps them onto real options, so `minimum-release-age` and camelCase `minimumReleaseAge` are inert.
 
 Effective value: project `RELEASE_AGE` takes precedence; if absent and `MGR=pnpm`, fall back to `GLOBAL_RELEASE_AGE`; if both are absent, the manager's built-in `AGE_DEFAULT` applies. Convert to days, then apply verdicts.
 
 Verdicts:
 - `MGR=npm`, `RELEASE_AGE` has `minimum-release-age` or `minimumReleaseAge` and no `min-release-age` → 🚨 CRITICAL "release-age key not recognised by npm — npm ignores unknown keys, so the gate is inactive and the configured value never applies; rename the key to `min-release-age` in .npmrc. e.g. Axios 1.14.1 (Mar 2026) was live for 3h, Shai-Hulud 2.0 (Nov 2025) for 12h, chalk/debug (Sep 2025) for 2.5h — all would have landed." Treat the value as NOT_SET in every verdict below; do not also emit the 0d finding.
 - `MGR=npm`, `RELEASE_AGE` has both `min-release-age` and one of the inert spellings → apply the verdicts below to `min-release-age`, plus ⚠️ WARN "inert duplicate key — npm ignores it; delete it from .npmrc so it stops implying the gate was raised."
-- `MGR=yarn`, `RELEASE_AGE` `npmMinimalAgeGate` is a duration string ("7d"/"1w"/"168h") and `YARN_DURATION_OK=NO` → 🚨 CRITICAL "release-age gate inactive — Yarn <4.12 reads npmMinimalAgeGate as a plain number through parseInt, so \"7d\" becomes 7 minutes and the week-long gate the team believes is in place does not exist. Upgrade to Yarn ≥4.12, where the setting became a DURATION type, or use a plain minute count, which is correct on every version: 7 days = 10080 (yarnpkg/berry#6991, reported on 4.10.3). e.g. Axios 1.14.1 (Mar 2026) was live for 3h, Shai-Hulud 2.0 (Nov 2025) for 12h, chalk/debug (Sep 2025) for 2.5h — all would have landed." Emit this in place of the day-based verdict below; do not also report a PASS for the configured value.
-- `MGR=yarn`, `npmMinimalAgeGate` is a duration string and `YARN_DURATION_OK=UNKNOWN` → ⚠️ WARN "yarn binary not found, so this cannot be verified — duration strings are honoured only on Yarn ≥4.12; below that \"7d\" silently becomes 7 minutes. Confirm the installed version, or switch to a plain minute count (7 days = 10080), which is correct on every version." Emit this in place of the day-based verdict below.
-- `MGR=yarn`, `npmMinimalAgeGate` is a duration string and `YARN_DURATION_OK=YES` → the suffix parses correctly ("7d"/"1w" = 7d). Convert to days and apply the verdicts below as normal; no warning.
+- `MGR=yarn`, `RELEASE_AGE` `npmMinimalAgeGate` is a duration string ("3d"/"72h"/"1w") and `YARN_DURATION_OK=NO` → 🚨 CRITICAL "release-age gate inactive — Yarn <4.12 reads npmMinimalAgeGate as a plain number through parseInt, so \"3d\" becomes 3 minutes and the three-day gate the team believes is in place does not exist. Upgrade to Yarn ≥4.12, where the setting became a DURATION type, or use a plain minute count, which is correct on every version: 3 days = 4320 (yarnpkg/berry#6991, reported on 4.10.3). e.g. Axios 1.14.1 (Mar 2026) was live for 3h, Shai-Hulud 2.0 (Nov 2025) for 12h, chalk/debug (Sep 2025) for 2.5h — all would have landed." Emit this in place of the day-based verdict below; do not also report a PASS for the configured value.
+- `MGR=yarn`, `npmMinimalAgeGate` is a duration string and `YARN_DURATION_OK=UNKNOWN` → ⚠️ WARN "yarn binary not found, so this cannot be verified — duration strings are honoured only on Yarn ≥4.12; below that \"3d\" silently becomes 3 minutes. Confirm the installed version, or switch to a plain minute count (3 days = 4320), which is correct on every version." Emit this in place of the day-based verdict below.
+- `MGR=yarn`, `npmMinimalAgeGate` is a duration string and `YARN_DURATION_OK=YES` → the suffix parses correctly ("3d"/"72h" = 3d). Convert to days and apply the verdicts below as normal; no warning.
 - Project NOT_SET, no exclude list, `AGE_DEFAULT=0`, AND (npm/yarn OR pnpm global also NOT_SET/0) → 🚨 CRITICAL "release age: 0d — every newly published version installs immediately. e.g. Axios 1.14.1 (Mar 2026) was live for 3h, Shai-Hulud 2.0 (Nov 2025) for 12h, chalk/debug (Sep 2025) for 2.5h — all would have landed."
-- Project NOT_SET, no exclude list, `AGE_DEFAULT=1d`, AND (yarn OR pnpm global also NOT_SET/0) → ⚠️ WARN "release age: 1d — inherited from the manager's default, not chosen by this project. A day would have blocked all three incidents this skill cites — Axios 1.14.1 (3h), Shai-Hulud 2.0 (12h), chalk/debug (2.5h) — so the exposure is real but narrow: the value is invisible in the repo, disappears if anyone pins an older manager, and does nothing against a compromise that goes unnoticed for longer. Commit an explicit 7 days — pnpm-workspace.yaml: minimumReleaseAge: 10080, or .yarnrc.yml: npmMinimalAgeGate: 10080."
+- Project NOT_SET, no exclude list, `AGE_DEFAULT=1d`, AND (yarn OR pnpm global also NOT_SET/0) → ⚠️ WARN "release age: 1d — inherited from the manager's default, not chosen by this project. A day would have blocked all three incidents this skill cites — Axios 1.14.1 (3h), Shai-Hulud 2.0 (12h), chalk/debug (2.5h) — so the exposure is real but narrow: the value is invisible in the repo, disappears if anyone pins an older manager, and does nothing against a compromise that goes unnoticed for longer. Commit an explicit 3 days — pnpm-workspace.yaml: minimumReleaseAge: 4320, or .yarnrc.yml: npmMinimalAgeGate: 4320."
 - Project NOT_SET, no exclude list, `AGE_DEFAULT=UNKNOWN` → 🚨 CRITICAL "release age not configured, and the manager version could not be read to tell whether a built-in default covers it — treat as 0d until confirmed. e.g. Axios 1.14.1 (Mar 2026) was live for 3h, Shai-Hulud 2.0 (Nov 2025) for 12h, chalk/debug (Sep 2025) for 2.5h — all would have landed."
-- Project NOT_SET, pnpm `GLOBAL_RELEASE_AGE` ≥10080 (7d) → ✅ PASS + note "pnpm global config supplies minimumReleaseAge={N}d — consider committing to `pnpm-workspace.yaml` for team visibility and new-joiner parity."
-- Project NOT_SET, pnpm `GLOBAL_RELEASE_AGE` 1-6d → ⚠️ WARN "global config has release age <7d — raise to 10080 and commit to workspace file."
+- Project NOT_SET, pnpm `GLOBAL_RELEASE_AGE` ≥4320 (3d) → ✅ PASS + note "pnpm global config supplies minimumReleaseAge={N}d — consider committing to `pnpm-workspace.yaml` for team visibility and new-joiner parity."
+- Project NOT_SET, pnpm `GLOBAL_RELEASE_AGE` 1-2d → ⚠️ WARN "global config has release age <3d — raise to 4320 and commit to workspace file."
 - Exclude present, base NOT_SET (and no global fallback) → 🚨 CRITICAL "exclude list set but gate inactive — team believes release-age protection is on; it is not. e.g. Axios 1.14.1 would have installed silently despite the apparent configuration."
 - Exclude present, base set → ✅ note excluded packages, flag non-internal-scoped ones
 - <1d → ⚠️ WARN
-- 1–6d → ✅ PASS + note "consider 7d"
-- ≥7d → ✅ PASS
+- 1–2d → ✅ PASS + note "consider 3d"
+- ≥3d → ✅ PASS
 
 **packageManager field**
 
@@ -191,7 +191,7 @@ Fix line:
 No separate check results block. Each check appears exactly once inside its category. PASSING goes last.
 
 **Icon system — shape and color both carry meaning:**
-- 🚨 CRITICAL — any of: unpatched CVE in installed tooling; dangerouslyAllowAllBuilds: true; npm ignore-scripts absent (scripts run by default — primary attack vector); release age not configured and the manager applies no default of its own (npm, pnpm <11, Yarn <4.12); npm release-age key spelled so npm ignores it (gate inactive); Yarn <4.12 with a duration-string release-age value (parsed as minutes — a 7d gate is 7 minutes); minimumReleaseAgeExclude set without minimumReleaseAge (false security posture); lockfile gitignored. Do not use for optional hardening gaps.
+- 🚨 CRITICAL — any of: unpatched CVE in installed tooling; dangerouslyAllowAllBuilds: true; npm ignore-scripts absent (scripts run by default — primary attack vector); release age not configured and the manager applies no default of its own (npm, pnpm <11, Yarn <4.12); npm release-age key spelled so npm ignores it (gate inactive); Yarn <4.12 with a duration-string release-age value (parsed as minutes — a 3d gate is 3 minutes); minimumReleaseAgeExclude set without minimumReleaseAge (false security posture); lockfile gitignored. Do not use for optional hardening gaps.
 - 🔶 FAIL — real gap needing a fix (Yarn Classic, lockfile absent, exotic deps with CVE exposure, external ranges + lockfile gap)
 - ⚠️ WARN — hardening opportunity, not immediately exploitable
 - ✅ PASS — clean, shown last
@@ -234,7 +234,7 @@ The `└─` prefix visually separates the fix from the description above it wit
 
 Examples:
 ```
-        └─ pnpm-workspace.yaml: minimumReleaseAge: 10080  # 7 days in minutes
+        └─ pnpm-workspace.yaml: minimumReleaseAge: 4320  # 3 days in minutes
         └─ package.json: "packageManager": "pnpm@10.26.2"
         └─ .npmrc: ignore-scripts=true
         └─ pnpm-workspace.yaml: strictDepBuilds: true

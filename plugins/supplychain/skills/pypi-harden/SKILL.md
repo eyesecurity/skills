@@ -101,7 +101,7 @@ From Step 1 output, compute these once and reference downstream by name.
 
 ## Step 2 — version rules
 
-- **pip < 26.0**: `--uploaded-prior-to` not available. Primary recommendation: switch the install step to `uv pip sync` (available today, no pip upgrade needed; configure `[tool.uv] exclude-newer = "7 days"`). Secondary: upgrade pip ≥26.1 and use `[install] uploaded-prior-to = P7D` in `pip.conf`.
+- **pip < 26.0**: `--uploaded-prior-to` not available. Primary recommendation: switch the install step to `uv pip sync` (available today, no pip upgrade needed; configure `[tool.uv] exclude-newer = "3 days"`). Secondary: upgrade pip ≥26.1 and use `[install] uploaded-prior-to = P3D` in `pip.conf`.
 - **pip 26.0**: only absolute dates supported — flag durations as "requires pip ≥ 26.1".
 - **Poetry (any version)**: native release-age gate not yet shipped (issue #10646, PR #10824 in review). Workarounds: maintain the lockfile via Renovate with `minimumReleaseAge`, or generate `requirements.txt` from `poetry export` then run `uv pip compile --exclude-newer` ahead of install.
 - **pdm**: same gap. Same workarounds.
@@ -112,19 +112,19 @@ Apply only checks for detected managers. Order findings by manager (primary firs
 
 **Release-age gate**
 
-uv: read `UV_TOOL_SECTION` and `UV_TOML` for `exclude-newer`. Accepts ISO 8601 duration (`"7 days"`, `"P7D"`, `"1w"`) or absolute RFC 3339 timestamp.
-- Absent → 🚨 CRITICAL "release age: 0d (uv) — every newly published version installs immediately. e.g. lightning 2.6.2/2.6.3 (Apr 2026) shipped a malicious wheel that runs `_runtime/start.py` on import, harvesting GitHub/npm/cloud credentials and worming through repos via planted `.claude/router_runtime.js` files. Socket detected and quarantined within hours; a 7-day exclude-newer window would have prevented installation entirely."
+uv: read `UV_TOOL_SECTION` and `UV_TOML` for `exclude-newer`. Accepts ISO 8601 duration (`"3 days"`, `"P3D"`, `"1w"`) or absolute RFC 3339 timestamp.
+- Absent → 🚨 CRITICAL "release age: 0d (uv) — every newly published version installs immediately. e.g. lightning 2.6.2/2.6.3 (Apr 2026) shipped a malicious wheel that runs `_runtime/start.py` on import, harvesting GitHub/npm/cloud credentials and worming through repos via planted `.claude/router_runtime.js` files. Socket detected and quarantined within hours; a 3-day exclude-newer window would have prevented installation entirely."
 - `< P1D` → ⚠️ WARN.
-- `P1D`–`P6D` → ✅ PASS + note "consider 7 days".
-- `≥ P7D` → ✅ PASS.
+- `P1D`–`P2D` → ✅ PASS + note "consider 3 days".
+- `≥ P3D` → ✅ PASS.
 - `exclude-newer-package` set without base `exclude-newer` → 🚨 CRITICAL "per-package overrides set but global gate inactive — false security posture. e.g. lightning 2.6.2 would have installed silently despite the apparent configuration."
 
 pip: read `PIP_CONF` for `[install] uploaded-prior-to`.
-- `PIP_VERSION < 26.0` → ⚠️ WARN "pip {version}: release-age gate unavailable. Switch install step to `uv pip sync` today (no upgrade needed) and add `[tool.uv] exclude-newer = \"7 days\"` to pyproject.toml — or upgrade pip ≥26.1 and set `[install] uploaded-prior-to = P7D` in `pip.conf`." Skip the rest.
-- Absent (pip ≥26.0) → 🚨 CRITICAL "release age: 0d (pip) — every newly published version installs immediately. e.g. lightning 2.6.2/2.6.3 (Apr 2026) — see incident details above. Add `[install] uploaded-prior-to = P7D` to `pip.conf` (pip ≥26.1) or use `uv` for the install step."
-- Present → parse value, apply same `< P1D` / 1-6 / ≥7 verdicts as uv.
+- `PIP_VERSION < 26.0` → ⚠️ WARN "pip {version}: release-age gate unavailable. Switch install step to `uv pip sync` today (no upgrade needed) and add `[tool.uv] exclude-newer = \"3 days\"` to pyproject.toml — or upgrade pip ≥26.1 and set `[install] uploaded-prior-to = P3D` in `pip.conf`." Skip the rest.
+- Absent (pip ≥26.0) → 🚨 CRITICAL "release age: 0d (pip) — every newly published version installs immediately. e.g. lightning 2.6.2/2.6.3 (Apr 2026) — see incident details above. Add `[install] uploaded-prior-to = P3D` to `pip.conf` (pip ≥26.1) or use `uv` for the install step."
+- Present → parse value, apply same `< P1D` / 1-2 / ≥3 verdicts as uv.
 
-Poetry: `RELEASE_AGE_AVAILABLE=NO` → 🔶 FAIL "Poetry has no native release-age gate (issue #10646, PR #10824 pending). Workarounds: (1) commit `poetry.lock` and use Renovate with `minimumReleaseAge: '7 days'`; or (2) use `poetry export -f requirements.txt --output requirements.txt` then install with `uv pip install -r requirements.txt --exclude-newer 7d` in CI."
+Poetry: `RELEASE_AGE_AVAILABLE=NO` → 🔶 FAIL "Poetry has no native release-age gate (issue #10646, PR #10824 pending). Workarounds: (1) commit `poetry.lock` and use Renovate with `minimumReleaseAge: '3 days'`; or (2) use `poetry export -f requirements.txt --output requirements.txt` then install with `uv pip install -r requirements.txt --exclude-newer 3d` in CI."
 
 pdm: same as Poetry — flag and suggest Renovate / uv-driven install.
 
@@ -228,8 +228,8 @@ Emit exactly one line. If `PRIMARY_MGR` undetermined, omit the 📖 line.
 
 Examples:
 ```
-        └─ pyproject.toml: [tool.uv] exclude-newer = "7 days"
-        └─ pip.conf: [install] uploaded-prior-to = P7D
+        └─ pyproject.toml: [tool.uv] exclude-newer = "3 days"
+        └─ pip.conf: [install] uploaded-prior-to = P3D
         └─ pyproject.toml: requires-python = ">=3.11,<3.13"
         └─ requirements.txt: regenerate via `pip-compile --generate-hashes`
         └─ .gitignore: remove `uv.lock` line
