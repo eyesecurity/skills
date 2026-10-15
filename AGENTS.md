@@ -5,4 +5,5 @@ This repo contains AI agent skills by Eye Security. Each plugin lives in `plugin
 Read the SKILL.md for the plugin you need:
 
 - **complisec** — `plugins/complisec/SKILL.md`
+- **supplychain** — `plugins/supplychain/SKILL.md`
 - **vulnerability-research** — `plugins/vulnerability-research/SKILL.md`
