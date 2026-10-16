@@ -55,6 +55,11 @@ echo "POETRY_VERSION=$(poetry --version 2>/dev/null | awk '{print $3}' | tr -d '
 echo "=== POETRY_DEPS ===" && awk '/^\[tool\.poetry\.dependencies\]/,/^\[/' pyproject.toml 2>/dev/null | grep -vE '^\[' | head -30
 echo "=== POETRY_SOURCES ===" && awk '/^\[\[tool\.poetry\.source\]\]/,/^\[\[/' pyproject.toml 2>/dev/null | head -30
 echo "=== POETRY_REQUIRES ===" && grep -nE '(requires-poetry|poetry-core)' pyproject.toml 2>/dev/null || echo "NOT_SET"
+echo "=== POETRY_TOML ===" && cat poetry.toml 2>/dev/null || echo "NONE"
+echo "=== POETRY_AGE_IN_PYPROJECT ===" && grep -nE '^\[(tool\.poetry\.)?solver\]|min-release-age' pyproject.toml 2>/dev/null || echo "NONE"
+echo "POETRY_MIN_RELEASE_AGE=$(poetry config solver.min-release-age 2>/dev/null || echo UNKNOWN)"
+echo "POETRY_MIN_RELEASE_AGE_EXCLUDE=$(poetry config solver.min-release-age-exclude 2>/dev/null || echo UNKNOWN)"
+echo "POETRY_MIN_RELEASE_AGE_EXCLUDE_SOURCE=$(poetry config solver.min-release-age-exclude-source 2>/dev/null || echo UNKNOWN)"
 ```
 
 **pip / pip-tools:**
@@ -89,7 +94,7 @@ From Step 1 output, compute these once and reference downstream by name.
 - `RELEASE_AGE_AVAILABLE`: per-manager boolean.
   - uv: YES (any version).
   - pip: YES if `PIP_VERSION` ≥ `26.0` (absolute date) — uplift to "duration" if ≥ `26.1`. NO if `< 26.0`. UNKNOWN if unparseable.
-  - Poetry: NO until PR #10824 ships. Flag as ecosystem gap.
+  - Poetry: YES if `POETRY_VERSION` ≥ `2.4.0`. NO if `< 2.4.0`. UNKNOWN if unparseable (Poetry not installed) — then judge from `POETRY_TOML` alone.
   - pdm: NO native support. Flag as ecosystem gap.
 - `LOCKFILE_KIND`: `uv.lock` | `poetry.lock` | `pdm.lock` | `Pipfile.lock` | `pylock.toml` | `requirements.txt+hashes` | `requirements.txt-no-hashes` | `none`.
 - `LOCKFILE_GITIGNORED`: YES if `.gitignore` lists the detected lockfile.
@@ -103,8 +108,9 @@ From Step 1 output, compute these once and reference downstream by name.
 
 - **pip < 26.0**: `--uploaded-prior-to` not available. Primary recommendation: switch the install step to `uv pip sync` (available today, no pip upgrade needed; configure `[tool.uv] exclude-newer = "3 days"`). Secondary: upgrade pip ≥26.1 and use `[install] uploaded-prior-to = P3D` in `pip.conf`.
 - **pip 26.0**: only absolute dates supported — flag durations as "requires pip ≥ 26.1".
-- **Poetry (any version)**: native release-age gate not yet shipped (issue #10646, PR #10824 in review). Workarounds: maintain the lockfile via Renovate with `minimumReleaseAge`, or generate `requirements.txt` from `poetry export` then run `uv pip compile --exclude-newer` ahead of install.
-- **pdm**: same gap. Same workarounds.
+- **Poetry < 2.4.0**: `solver.min-release-age` not available. Upgrade to Poetry ≥2.4.0.
+- **Poetry ≥ 2.4.0**: native gate via `solver.min-release-age` (integer days, default `0`). Set per project with `poetry config --local solver.min-release-age 3` (writes `[solver] min-release-age = 3` to `poetry.toml`) or `POETRY_SOLVER_MIN_RELEASE_AGE=3`. Applies during dependency resolution.
+- **pdm**: native release-age gate not available. Workarounds: maintain the lockfile via Renovate with `minimumReleaseAge`, or export `requirements.txt` and run `uv pip compile --exclude-newer` ahead of install.
 
 ## Step 3 — checks
 
@@ -124,9 +130,16 @@ pip: read `PIP_CONF` for `[install] uploaded-prior-to`.
 - Absent (pip ≥26.0) → 🚨 CRITICAL "release age: 0d (pip) — every newly published version installs immediately. e.g. lightning 2.6.2/2.6.3 (Apr 2026) — see incident details above. Add `[install] uploaded-prior-to = P3D` to `pip.conf` (pip ≥26.1) or use `uv` for the install step."
 - Present → parse value, apply same `< P1D` / 1-2 / ≥3 verdicts as uv.
 
-Poetry: `RELEASE_AGE_AVAILABLE=NO` → 🔶 FAIL "Poetry has no native release-age gate (issue #10646, PR #10824 pending). Workarounds: (1) commit `poetry.lock` and use Renovate with `minimumReleaseAge: '3 days'`; or (2) use `poetry export -f requirements.txt --output requirements.txt` then install with `uv pip install -r requirements.txt --exclude-newer 3d` in CI."
+Poetry: read `POETRY_MIN_RELEASE_AGE`; if `UNKNOWN`, read `min-release-age` under `[solver]` in `POETRY_TOML`. Value is integer days.
+- `RELEASE_AGE_AVAILABLE=NO` → 🔶 FAIL "Poetry {version}: release-age gate unavailable. Upgrade to Poetry ≥2.4.0 and run `poetry config --local solver.min-release-age 3`." Skip the rest.
+- `POETRY_AGE_IN_PYPROJECT` ≠ NONE → 🚨 CRITICAL "`min-release-age` set in pyproject.toml — Poetry reads it only from `poetry.toml`, global config or `POETRY_SOLVER_MIN_RELEASE_AGE`. A top-level `[solver]` table is silently ignored; `[tool.poetry.solver]` fails validation and breaks every Poetry command. Remove it from pyproject.toml and run `poetry config --local solver.min-release-age 3`." Ignore the pyproject value in the verdicts below. If the effective value is `0`, this finding replaces the 0d finding.
+- Absent or `0` → 🚨 CRITICAL "release age: 0d (Poetry) — every newly published version resolves immediately. e.g. lightning 2.6.2/2.6.3 (Apr 2026) — see incident details above. Run `poetry config --local solver.min-release-age 3` and commit `poetry.toml`."
+- `1`–`2` → ✅ PASS + note "consider 3 days".
+- `≥ 3` → ✅ PASS.
+- Set only via global user config or env var (not in committed `poetry.toml`) → ⚠️ WARN "gate set on this machine only — CI and other developers resolve without it. Run `poetry config --local solver.min-release-age 3` and commit `poetry.toml`."
+- `solver.min-release-age-exclude` / `-exclude-source` set while gate is `0` → 🚨 CRITICAL "exclusions set but global gate inactive — false security posture."
 
-pdm: same as Poetry — flag and suggest Renovate / uv-driven install.
+pdm: 🔶 FAIL "pdm has no native release-age gate. Workarounds: (1) commit `pdm.lock` and use Renovate with `minimumReleaseAge: '3 days'`; or (2) `pdm export -f requirements -o requirements.txt` then install with `uv pip install -r requirements.txt --exclude-newer 3d` in CI."
 
 **Lockfile + hash mode**
 
@@ -187,7 +200,7 @@ Each check appears exactly once inside its category. PASSING goes last.
 
 **Icon system — same as `npm-harden`:**
 - 🚨 CRITICAL — release age 0 with no global, exclude-newer-package without base, lockfile gitignored, `--trusted-host` set, no lockfile.
-- 🔶 FAIL — real gap needing a fix (no hash mode in requirements, exotic deps, extra-index-url, Poetry/pdm release-age unavailable).
+- 🔶 FAIL — real gap needing a fix (no hash mode in requirements, exotic deps, extra-index-url, Poetry < 2.4.0 / pdm release-age unavailable).
 - ⚠️ WARN — hardening opportunity, not immediately exploitable.
 - ✅ PASS — clean, shown last.
 - ➖ N/A.
